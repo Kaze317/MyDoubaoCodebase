@@ -1,0 +1,24 @@
+还没完成打包文件的输出，
+改进：改成使用如下面的方法追加数据
+
+import pandas as pd
+
+# 文件路径和工作表名称
+file_path = 'your_file.xlsx'
+sheet_name = 'Sheet1'  # 需要追加数据的工作表名称
+
+# 读取现有的工作表数据
+existing_data = pd.read_excel(file_path, sheet_name=sheet_name)
+
+# 创建新的数据（例如，新的 DataFrame）
+new_data = pd.DataFrame({
+    'Column1': ['New data1', 'New data2'],
+    'Column2': [10, 20]
+})
+
+# 将新数据追加到现有数据
+updated_data = pd.concat([existing_data, new_data], ignore_index=True)
+
+# 保存更新后的数据到 Excel 文件
+with pd.ExcelWriter(file_path, engine='openpyxl', mode='a', if_sheet_exists='replace') as writer:
+    updated_data.to_excel(writer, sheet_name=sheet_name, index=False)
