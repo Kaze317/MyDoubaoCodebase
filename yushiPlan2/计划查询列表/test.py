@@ -1,5 +1,6 @@
 import calendar
 from datetime import datetime
+import pandas as pd
 
 def amount_Plan(data, month, columns_extract, years=2025):
     
