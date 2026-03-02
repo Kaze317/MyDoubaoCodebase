@@ -1,0 +1,103 @@
+
+Dim re = self.input, hWeb
+需要匹配的月份 = re[0]
+计划开始时间 = re[1]
+计划结束时间 = re[2]
+保存路径 = re[3]
+预试检测计划文件名 = re[4]
+
+hWeb = WebBrowser.Create("edge", "", 30000, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200, "sBrowserPath": "", "sStartArgs": ""})
+hWeb = WebBrowser.GoURL(hWeb, "https://10.150.130.163/isc_sso/login", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+Window.SetActive(@ui"登录窗口_MicrosoftEdge")
+Window.Show(@ui"登录窗口_MicrosoftEdge", "max")
+Function 登录(hweb)
+	Delay(5000)
+	hWeb = WebBrowser.WaitPage(hWeb, @ui"列表项<li>_账号登录edge", 60000, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"列表项<li>_账号登录edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"账号<input>edge", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Keyboard.InputText(@ui"账号<input>edge", "sejqr@gzps.corp.csg", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	Mouse.Action(@ui"输入密码<input>edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Keyboard.InputText(@ui"输入密码<input>edge", "Jqr@0819", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	//滑块验证
+	Mouse.Action(@ui"滑块拖动<span>edge", "left", "down", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	滑块坐标 = Mouse.GetPos()
+	滑块开始坐标 = 获取鼠标坐标并滑动(滑块坐标)
+	Mouse.Drag(滑块开始坐标[0], 滑块开始坐标[1], 1142, 507, "left", [], {"iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"edge<input>_登录", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Delay(5000)
+End Function
+
+Function 获取鼠标坐标并滑动(滑块坐标)
+	i = 0
+	b = []
+	For Each key, value In 滑块坐标
+		b = insert(b, i, value)
+		i = i+1
+	Next 
+	Return b
+End Function
+
+//登录
+Try 
+	hWeb = WebBrowser.BindBrowser("edge", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	登录标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	TracePrint(登录标题)
+	If 登录标题 = "登录"
+		登录界面 = 登录(hweb)
+	else
+		登录页面打开一窗通办 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	End If
+Catch error
+	TracePrint("登录界面错误，正在重新运行")
+	TracePrint(error)
+	hWeb = WebBrowser.BindBrowser("edge", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	登录标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If 登录标题 = "登录"
+		登录界面 = 登录(hweb)
+	else
+		登录页面打开一窗通办 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	End If
+End Try
+
+
+
+登录页面打开一窗通办 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+
+UiElement.Wait(@ui"链接<a>_全部应用edge", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+Mouse.Action(@ui"链接<a>_全部应用edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+UiElement.Wait(@ui"图形_电网管理平台资产域edge", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+Mouse.Action(@ui"图形_电网管理平台资产域edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+
+
+Function 电网管理平台资产域输电防灾管理(hWeb)
+	UiElement.Wait(@ui"全部应用<span>edge", "show", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"全部应用<span>edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Keyboard.InputText(@ui"电网管理平台资产域<input>搜索应用输入框edge", "输电防灾管理", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	Mouse.Action(@ui"电网管理平台资产域<i>搜索按钮edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"电网管理平台资产域<span>_输电防灾管理edge", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"电网管理平台资产域<span>_输电防灾管理edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+
+End Function
+输电防灾管理 = 电网管理平台资产域输电防灾管理(hWeb)
+hWeb = WebBrowser.BindBrowser("edge", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+输电防灾管理标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+
+If 输电防灾管理标题 = "输电防灾管理"
+	Mouse.Action(@ui"文本<span>_三跨两临近管理（新）edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Delay(2000)
+	UiElement.Wait(@ui"列表项<li>_跨越公路重点区段edge", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"列表项<li>_跨越公路重点区段edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"文本<span>_更多edge", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"文本<span>_更多edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	// Keyboard.InputText(@ui"区段状态<input>edge", "现存区段", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": true})
+	Mouse.Action(@ui"按钮<button>_查询edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Mouse.Action(@ui"按钮<button>_导出edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"等待元素图像<img>edge", "show", 20000, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200})
+	UiElement.Wait(@ui"等待元素图像<img>edge", "hide", 20000, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200})
+
+	Mouse.Action(@ui"第一个下载<i>edge", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+End If
+//WebBrowser.Close(hWeb,{"bContinueOnError":false,"iDelayAfter":300,"iDelayBefore":200})
+
+
+Return re

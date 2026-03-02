@@ -1,0 +1,22 @@
+{
+	"wnd":[
+		{
+			"cls":"Chrome_WidgetWin_*",
+			"title":"*",
+			"app":"UiBot",
+			"appargs":"resources\\browser\\app.asar"
+		},
+		{
+			"cls":"Chrome_RenderWidgetHostHWND",
+			"title":"Chrome Legacy Window"
+		}
+	],
+	"html":[
+		{
+			"tag":"I",
+			"parentid":"dataTableId",
+			"css-selector":"body>div>div>div>div>div>table>tbody>tr:nth-child(1)>td>div>i",
+			"tableCol":"4"
+		}
+	]
+}

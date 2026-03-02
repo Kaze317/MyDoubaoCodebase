@@ -1,0 +1,246 @@
+//已完成
+Dim objExcelWorkBook, objExcelyuanbiao, objDatatableID, arrID, arrayRet, objDatatable, objSetRet, bRet
+Dim arrRow
+Dim section
+Dim SixMonths
+Dim back = self.input
+需要匹配的月份 = back[0]
+预试检测计划文件名 = back[1]
+计划查询表文件名 = back[2]
+count5 = 0
+arraycount5 = [["1月份",0],["2月份",0],["3月份",0],["4月份",0],["5月份",0],["6月份",0],["7月份",0],["8月份",0],["9月份",0],["10月份",0],["11月份",0],["12月份",0]]
+objExcelWorkBook = Excel.BindBook(计划查询表文件名)
+objExcelyuanbiao = Excel.BindBook(预试检测计划文件名)
+
+// 等同def
+Function 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份) 
+    计划编号 = 新数据数组[i][0]
+    工作内容保存 = 工作地点和内容 + '\n'+工作内容保存
+    计划编号保存 = 计划编号 +'\n'+ 计划编号保存
+    实际开始时间 = 新数据数组[i][3] +'\n'+ 实际开始时间
+    实际结束时间 = 新数据数组[i][4] +'\n'+ 实际结束时间
+    实际结束时间 = RTrim(实际结束时间,"\n") //删除后面的换行
+    //读取完成状态，判断是否已完成，如果已完成，则不需要填写实际结束时间
+    完成状态 = Excel.ReadCell(objExcelyuanbiao,"5、电缆护套环流检测","X"&线路+4,false)
+    If 完成状态 = "已完成" 
+        //已完成
+        已完成计划编号 = Excel.ReadCell(objExcelyuanbiao,"5、电缆护套环流检测","U"&线路+4,false) //读取单元格数据
+        已完成工作内容 = Excel.ReadCell(objExcelyuanbiao,"5、电缆护套环流检测","W"&线路+4,false)
+        已完成实际开始时间 = Excel.ReadCell(objExcelyuanbiao,"5、电缆护套环流检测","N"&线路+4,false)
+        已完成计划编号 = 已完成计划编号 + '\n' + 新数据数组[i][0] //拼接新数据进去
+        已完成工作内容 = 已完成工作内容 + '\n' + 工作内容保存
+        已完成实际开始时间 = 已完成实际开始时间 + '\n' + 新数据数组[i][3]
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "U" & 线路+4, 已完成计划编号, false) //回填数据
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "W" & 线路+4, 已完成工作内容, false)
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "N" & 线路+4, 已完成实际开始时间, false)
+    Else 
+        //未完成
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "U" & 线路+4, 计划编号, false)
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "V" & 线路+4, 线路名, false)
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "W" & 线路+4, 工作地点和内容, false)
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "N" & 线路+4, 实际开始时间, false)
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "O" & 线路+4, 实际结束时间, false)
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "X" & 线路+4, "已完成", false)
+        Excel.WriteCell(objExcelyuanbiao, "5、电缆护套环流检测", "Y" & 线路+4, 需要匹配的月份&"月份已完成", false)
+    End If
+    Return "回填成功"
+End Function
+
+Function 关注和一般(新数据数组,原表数组,线路,计划结束月份) //一年2测，筛选日期，以筛选到同名的线路名的第二个的计划日期之前为第一次测试，之后为第二次测试
+    
+    工作内容保存 = ""
+    计划编号保存 = ""
+    实际开始时间 = ""
+    实际结束时间 = ""
+    线路名 = 原表数组[线路][0]
+    sRet = Regex.Replace(线路名, "乙", ".*?乙", 1)
+    计划结束日期 = 原表数组[线路][2]
+    工作内容合并 = ""
+    符合线路段ID = 0
+    For i = 0 To UBound(新数据数组) step 1 //i为最新数据中符合当前项目筛选条件的内容的下标
+        工作地点和内容 = 新数据数组[i][1]+新数据数组[i][2]
+        // 正则匹配线路名和日期
+        bret = Regex.Test(工作地点和内容,sRet)
+        实际时间 = Time.CDate(新数据数组[i][4], "yyyy.mm.dd")
+        实际月份 = Time.Month(实际时间)
+        If 实际月份 = 需要匹配的月份
+            If bret=True And 计划结束月份<=6 And 实际月份<=6
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份) 
+            ElseIf bret=True And 计划结束月份>6 And 实际月份>6
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份)
+            End If
+        End If
+    Next
+    Return "已填写关注和一般"
+End Function
+
+Function 关键和重要(新数据数组,原表数组,线路,计划月份) //两个月一测，按照时间1-2，3-4，5-6，7-8，9-10，11-12这六个时间段来匹配，
+	//将计划时间与实际时间月份进行对比即可
+    
+    工作内容保存 = ""
+    计划编号保存 = ""
+    实际开始时间 = ""
+    实际结束时间 = ""
+    线路名 = 原表数组[线路][0]
+    sRet = Regex.Replace(线路名, "乙", ".*?乙", 1)
+    计划结束日期 = 原表数组[线路][2]
+    工作内容合并 = ""
+    For i = 0 To UBound(新数据数组) step 1 //i为最新数据中符合当前项目筛选条件的内容的下标
+        工作地点和内容 = 新数据数组[i][1]+新数据数组[i][2]
+        // 正则匹配线路名和日期
+        bret = Regex.Test(工作地点和内容,sRet)
+        dTime = Time.CDate(新数据数组[i][4], "yyyy.mm.dd")
+        实际月份 = Time.Month(dTime)
+        //判断月份在哪里，section为区间变量
+        If 计划月份 = 1 or 计划月份 = 2
+            section = 1
+        ElseIf 计划月份 = 3 or 计划月份 = 4
+            section = 2
+        ElseIf 计划月份 = 5 or 计划月份 = 6
+            section = 3
+        ElseIf 计划月份 = 7 or 计划月份 = 8
+            section = 4
+        ElseIf 计划月份 = 9 or 计划月份 = 10
+            section = 5
+        ElseIf 计划月份 = 11 or 计划月份 = 12
+            section = 6
+        End If
+        If 实际月份 = 需要匹配的月份
+            If bret=True And section = 1 And (实际月份 = 1 Or 实际月份 = 2)
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份) 
+            ElseIf bret=True And section = 2 And (实际月份 = 3 Or 实际月份 = 4)
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份)
+            ElseIf bret=True And section = 3 And (实际月份 = 5 Or 实际月份 = 6)
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份)
+            ElseIf bret=True And section = 4 And (实际月份 = 7 Or 实际月份 = 8)
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份)
+            ElseIf bret=True And section = 5 And (实际月份 = 9 Or 实际月份 = 10)
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份)
+            ElseIf bret=True And section = 6 And (实际月份 = 11 Or 实际月份 = 12)
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份)
+            End If
+        End If
+    Next
+    Return "已填写关键和重要"
+End Function
+
+Function 其余时段(新数据数组,原表数组,线路,计划开始月份,计划结束月份)
+    //将计划时间与实际时间月份进行对比即可
+    
+    工作内容保存 = ""
+    计划编号保存 = ""
+    实际开始时间 = ""
+    实际结束时间 = ""
+    线路名 = 原表数组[线路][0]
+    sRet = Regex.Replace(线路名, "乙", ".*?乙", 1)
+    计划结束日期 = 原表数组[线路][2]
+    工作内容合并 = ""
+    For i = 0 To UBound(新数据数组) step 1 //i为最新数据中符合当前项目筛选条件的内容的下标
+        工作地点和内容 = 新数据数组[i][1]+新数据数组[i][2]
+        // 正则匹配线路名和日期
+        bret = Regex.Test(工作地点和内容,sRet)
+        dTime = Time.CDate(新数据数组[i][4], "yyyy.mm.dd")
+        实际月份 = Time.Month(dTime)
+        If 实际月份 = 需要匹配的月份
+            If bret=True And (实际月份 >= 计划开始月份 And 实际月份 <= 计划结束月份)
+                回填 = 完成状态回填(新数据数组,原表数组,线路,工作地点和内容,工作内容保存,计划编号保存,实际开始时间,实际结束时间,线路名,需要匹配的月份)
+            End If
+        End If
+    Next
+    Return "已填写关键和重要"
+End Function
+
+//读取线路名和结束时间 并筛选出月份，最后转成数组
+原表 = Excel.ReadRange(objExcelyuanbiao, "5、电缆护套环流检测", "D4:H815", false)
+原表 = Datatable.BuildDataTable(原表, ["线路名称", "线路重要度", "工作内容", "计划开始日期", "计划结束日期"])
+//创建新的数据表
+原表 = Datatable.SelectDataTableColumns(原表, ["线路名称", "计划开始日期", "计划结束日期","线路重要度"])
+arrayShape = Datatable.GetDataTableShape(原表)
+原表数组 = Datatable.GetDataTableByArray(原表, false)
+TracePrint(arrayShape[0]) //行数统计
+// TracePrint(Len(原表数组))
+
+//读取区域
+row = Excel.GetRowsCount(objExcelWorkBook,"计划查询列表") //获取行号
+arrayRet = Excel.ReadRange(objExcelWorkBook, "计划查询列表", "A2:BA"&row, false)
+objDatatable = Datatable.BuildDataTable(arrayRet, ["计划状态", "计划类型", "计划编号", "工作类别", "工作地点", "工作内容", "计划开始时间", "计划结束时间", "工作部门", "工作班组", "工作班组全路径", "工作细类", "工作方式", "计划发布日期", "计划派工日期", "开工时间", "负责人", "负责人电话", "工作成员", "实际开始时间", "实际结束时间", "计划来源", "创建人", "主配网标识", "计划性质", "专业", "电压等级", "计划到期日期", "需要办票", "是否需要工器具", "是否纳入视频管控", "工作预估人数", "派工人", "风险等级", "风险值", "实施方式", "外单位名称", "关联工作票", "班长评价", "确认人", "确认时间", "执行中状态", "工作流状态", "创建时间", "作业任务类型", "需审批的临时任务", "临时性任务原因类型", "临时性任务其他原因说明", "工作结果", "备注", "供电局", "是否超期", "计划标签"])
+//创建新的数据表
+objDatatable = Datatable.SelectDataTableColumns(objDatatable, ["计划编号", "工作地点", "工作内容", "实际开始时间", "实际结束时间"])
+//筛选符合条件的数据
+objDatatable = Datatable.QueryDataTable(objDatatable, "工作地点.str.contains(\"护套环流\") or 工作内容.str.contains(\"护套环流\")")
+// objDatatable = Datatable.QueryDataTable(objDatatable, "实际开始时间.str.contains(\"2024-06\") or 实际结束时间.str.contains(\"2024-06\")")
+//创建数组
+新数据数组 = Datatable.GetDataTableByArray(objDatatable, false) // TracePrint(新数据数组[0])
+TracePrint(Len(新数据数组))
+
+
+线路名 = []
+For i = 0 To UBound(原表数组) step 1
+    线路重要度 = 原表数组[i][3]
+    其余时段匹配 = Regex.Test(线路重要度,"其余时段")
+    计划结束月份 = Time.Month(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+    If 线路重要度 = "关注" Or 线路重要度 = "一般"
+        // TracePrint(线路重要度+i)
+        线路名 = push(线路名,原表数组[i][0])
+        结果 = 关注和一般(新数据数组,原表数组,i,计划结束月份)
+        线路名 = []
+    ElseIf 其余时段匹配 = True
+        // TracePrint(线路重要度+i)
+        线路名 = push(线路名,原表数组[i][0])
+        计划开始时间 = Time.CDate(原表数组[i][1], "yyyy.mm.dd")
+        计划开始月份 = Time.Month(计划开始时间)
+        结果 = 其余时段(新数据数组,原表数组,i,计划开始月份,计划结束月份)
+        线路名 = []
+    ElseIf 线路重要度 = "关键" Or 线路重要度 = "重要" 
+        // TracePrint(线路重要度+i)
+        线路名 = push(线路名,原表数组[i][0])
+        原表时间 = Time.CDate(原表数组[i][2], "yyyy.mm.dd")
+        计划月份 = Time.Month(原表时间)
+        结果 = 关键和重要(新数据数组,原表数组,i,计划月份)
+        线路名 = []
+        
+    End If
+    工作内容保存 = ""
+    计划编号保存 = ""
+    实际开始时间 = ""
+    实际结束时间 = ""
+    // If i=10
+    // 	Break
+    // End If
+
+    // 统计 = Excel.ReadCell(objExcelyuanbiao,"5、电缆护套环流检测","X"&i+4,false)
+    // 实际结束月份 = Excel.ReadCell(objExcelyuanbiao,"5、电缆护套环流检测","O"&i+4,false)
+    // 截取时间 = SubStr(实际结束月份,1,11)
+    // 截取时间 = Replace(截取时间,"\n","",false)
+    // 实际结束月份 = Time.Month(Time.CDate(截取时间, "yyyy.mm.dd"))
+    // If 统计 = "已完成" And 实际结束月份 = 1
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 2
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 3
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 4
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 5
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 6
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 7
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 8
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 9
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 10
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 11
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // ElseIf 统计 = "已完成" And 实际结束月份 = 12
+    //     arraycount5[实际结束月份-1][1] = arraycount5[实际结束月份-1][1] + 1
+    // End If
+Next
+// For a = 0 To UBound(arraycount5) step 1
+//     count5 = count5 + arraycount5[a][1]
+// Next
+Excel.Save(objExcelyuanbiao)
+Return back

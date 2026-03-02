@@ -1,0 +1,119 @@
+
+Dim re = self.input, hWeb
+需要匹配的月份 = re[0]
+计划开始时间 = re[1]
+计划结束时间 = re[2]
+保存路径 = re[3]
+预试检测计划文件名 = re[4]
+跨越公路路径 = File.SearchFile(保存路径, "*跨越公路重点区段*", true)
+跨越河流路径 = File.SearchFile(保存路径, "*跨越河流重点区段*", true)
+跨越铁路路径 = File.SearchFile(保存路径, "*跨越铁路重点区段*", true)
+跨越公路文件名 = Replace(跨越公路路径[0], 保存路径, "", false)
+跨越河流文件名 = Replace(跨越河流路径[0], 保存路径, "", false)
+跨越铁路文件名 = Replace(跨越铁路路径[0], 保存路径, "", false)
+// 打开预试计划表
+打开跨越公路 = Excel.OpenExcel(跨越公路路径[0], false, "Excel", "", "") //路径+文件是否可见
+打开跨越河流 = Excel.OpenExcel(跨越河流路径[0], false, "Excel", "", "") //路径+文件是否可见
+打开跨越铁路 = Excel.OpenExcel(跨越铁路路径[0], false, "Excel", "", "") //路径+文件是否可见
+
+// //测试
+// 跨越公路文件名 = "跨越公路重点区段_20240826165855221.xlsx"
+// 跨越河流文件名 = "跨越河流重点区段_20240826170510178.xlsx"
+// 跨越铁路文件名 = "跨越铁路重点区段_20240826170358469.xlsx"
+// 预试检测计划文件名 = "输电管理二所2024年预试检测计划（已回填七月份数据并增加各中心完成情况图表）+(修改终端避雷场试验匹配规则和重要交叉跨越).xlsx"
+
+objExcelyuanbiao = Excel.BindBook(预试检测计划文件名)
+跨越公路 = Excel.BindBook(跨越公路文件名)
+跨越河流 = Excel.BindBook(跨越河流文件名)
+跨越铁路 = Excel.BindBook(跨越铁路文件名)
+
+//选择需要查询的月份，需要手动修改
+row字段 = Excel.ReadRange(跨越公路, "跨越公路重点区段", "A4:W4", false) //获取字段名
+// row字段 = Excel.ReadRange(跨越公路, "跨越公路重点区段", "A4:DE4", false) //获取字段名
+row1 = Excel.GetRowsCount(跨越公路, "跨越公路重点区段") //获取行号
+跨越公路message = Excel.ReadRange(跨越公路, "跨越公路重点区段", "CX5:DE" & row1, false)
+跨越公路next = Excel.ReadRange(跨越公路, "跨越公路重点区段", "A5:W" & row1, false)
+row2 = Excel.GetRowsCount(跨越河流, "跨越河流重点区段")
+跨越河流message = Excel.ReadRange(跨越河流, "跨越河流重点区段", "CA5:CH" & row2, false)
+跨越河流next = Excel.ReadRange(跨越河流, "跨越河流重点区段", "A5:W" & row2, false)
+row3 = Excel.GetRowsCount(跨越铁路, "跨越铁路重点区段")
+跨越铁路message = Excel.ReadRange(跨越铁路, "跨越铁路重点区段", "DB5:DI" & row3, false)
+跨越铁路next = Excel.ReadRange(跨越铁路, "跨越铁路重点区段", "A5:W" & row3, false)
+
+// TracePrint(跨越公路重点区段[0][1])
+arrRet = concat(跨越公路next, 跨越河流next)
+arrRet = concat(arrRet, 跨越铁路next)
+红外测温 = concat(跨越公路message, 跨越河流message)
+红外测温 = concat(红外测温, 跨越铁路message)
+iRet = UBound([])
+iRet = UBound([])
+TracePrint("共有"+UBound([arrRet])+"条数据")
+// TracePrint(arrRet[0])
+// TracePrint(红外测温[0])
+
+// //创建工作表
+// Excel.ActiveSheet(objExcelyuanbiao,"重要跨越区段测温")
+// Excel.CreateSheet(objExcelyuanbiao,"三跨两临近重点区段","after",false)
+// Excel.ActiveSheet(objExcelyuanbiao,"三跨两临近重点区段")
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","A1","计划编号",false)
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","B1","塔段",false)
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","C1","线路名",false)
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","D1","红外测温最近一次完成时间",false)
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","E1","超期红绿灯",false)
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","F1","状态",false) //现存区段or已取消	
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","G1","跨越等级",false)
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","H1","日常巡视最近一次完成时间",false)
+// Excel.WriteCell(objExcelyuanbiao,"三跨两临近重点区段","I1","超期红绿灯",false)
+
+row = Excel.GetRowsCount(objExcelyuanbiao, "三跨两临近重点区段") //读取行数
+For j = 0 To UBound(arrRet) step 1
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "A" & row+j+1, arrRet[j][1], False) //在原有的数据后面续写
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "B" & row+j+1, arrRet[j][12], false)
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "C" & row+j+1, arrRet[j][14], false)
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "D" & row+j+1, 红外测温[j][5], false)
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "E" & row+j+1, 红外测温[j][7], false)
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "F" & row+j+1, arrRet[j][8], false)
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "G" & row+j+1, arrRet[j][22], false)
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "H" & row+j+1, 红外测温[j][0], false)
+	Excel.WriteCell(objExcelyuanbiao, "三跨两临近重点区段", "I" & row+j+1, 红外测温[j][2], false)
+	TracePrint("以写入"&j+1&"条")
+Next 
+Excel.Save(objExcelyuanbiao)
+Excel.CloseExcel(打开跨越公路, true)
+Excel.CloseExcel(打开跨越河流, true)
+Excel.CloseExcel(打开跨越铁路, true)
+Return re
+
+Function 内容(属性1) 
+	arrRet = [
+	"绿灯",
+	"SSKQ0301240800016",
+	"广州供电局",
+	"花都数字输电运维中心第一小组",
+	"2010国标",
+	"我方先建",
+	"113.36835245",
+	"23.44767615",
+	"现存区段",
+	"否",
+	"江展滔",
+	"2024-08-23",
+	"N0005-N0006",
+	"110kV",
+	"110kV空九乙线北兴乙支线",
+	"花都数字输电运维中心第一小组",
+	"输电管理二所",
+	"薛志东",
+	"薛志东",
+	"2020-08-14",
+	"是",
+	"机场第二高速",
+	"高速公路"
+]
+
+红外测温 = [
+	"2024-08-02",
+	"",
+	"绿灯"
+]
+End Function

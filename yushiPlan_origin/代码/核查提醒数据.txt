@@ -1,0 +1,509 @@
+Dim back = self.input
+当前月份 = back[0]
+预试检测计划文件名 = back[1]
+计划查询表文件名 = back[2]
+保存路径 = back[3]
+超期提醒 = back[4]
+
+// 预试检测计划文件名 = "输电管理二所2024年预试检测计划.xlsx"
+// 当前月份 = 8
+// 保存路径 = '''D:\USERS\vwuchaorong000830\Desktop\test\《输电二所2024年预试计划核查问题记录表》.xlsx'''
+文件名 = "《输电二所2024年预试计划核查问题记录表》.xlsx"
+保存文件 = 保存路径+文件名
+objExcelyuanbiao = Excel.BindBook(预试检测计划文件名)
+核查数据表 = Excel.OpenExcel(保存文件,true,"WPS","","")
+日期 = time.Format(time.Now(),"yyyy-mm-dd")
+天数 = time.Day(Time.CDate(日期,"yyyy.mm.dd"))
+
+
+
+
+白云中心 = 0
+从化中心 = 0
+花都中心 = 0
+天河中心 = 0
+Function 最近一次完成(objExcelyuanbiao,i,当前月份,预试计划表子表名) 
+    //回填没完成的上一个月的完成时间
+    If 当前月份 = 8 
+        最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"U"&i,true) //七月
+    ElseIf 当前月份 = 9
+        最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"W"&i,true) //八月
+    ElseIf 当前月份 = 10
+        最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"Y"&i,true) //九月
+    ElseIf 当前月份 = 11
+        最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"AA"&i,true) //十月
+    ElseIf 当前月份 = 12
+        最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"AC"&i,true) //十一月
+    End If
+    Return 最近一次完成时间
+End Function
+
+Function 本月最近一次完成(objExcelyuanbiao,i,当前月份,预试计划表子表名) 
+    If 当前月份 = 7 
+        本月最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"U"&i,true) //七月
+    ElseIf 当前月份 = 8
+        本月最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"W"&i,true) //八月
+    ElseIf 当前月份 = 9
+        本月最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"Y"&i,true) //九月
+    ElseIf 当前月份 = 10
+        本月最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"AA"&i,true) //十月
+    ElseIf 当前月份 = 11
+        本月最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"AC"&i,true) //十一月
+    ElseIf 当前月份 = 12
+        本月最近一次完成时间 = Excel.ReadCell(objExcelyuanbiao,预试计划表子表名,"AE"&i,true) //十一月
+    End If
+    Return 本月最近一次完成时间
+End Function
+
+Function 新建工作表(核查数据表,工作表名) 
+    Excel.CreateSheet(核查数据表,工作表名,"after",false)
+    Excel.ActiveSheet(核查数据表,工作表名)
+End Function
+
+Function 各中心统计(中心名称) 
+    If Regex.Test(中心名称,"白云") = True 
+        白云中心 = 白云中心 + 1
+        // 白云 = "白云中心"
+    ElseIf Regex.Test(中心名称,"花都") = True 
+        花都中心 = 花都中心 + 1
+        // 花都 = "花都中心"
+    ElseIf Regex.Test(中心名称,"从化") = True 
+        从化中心 = 从化中心 + 1
+        // 从化 = "从化中心"
+    ElseIf Regex.Test(中心名称,"天河") = True 
+        天河中心 = 天河中心 + 1
+        // 天河 = "天河中心"
+    End If
+End Function
+
+Function 涉及中心(统计)
+    涉及 = ""
+    //[白云中心,花都中心,从化中心,天河中心]
+    If 统计[0] <> 0
+        涉及 = 涉及 + "白云中心"
+    End If
+    If 统计[1] <> 0
+        涉及 = 涉及 + "花都中心"
+    End If
+    If 统计[2] <> 0
+        涉及 = 涉及 + "从化中心"
+    End If
+    If 统计[3] <> 0
+        涉及 = 涉及 + "天河中心"
+    End If
+    Return 涉及
+End Function
+
+Function 替换(内容) 
+    内容 = Replace(内容,"白云中心","白云中心、",false)
+    内容 = Replace(内容,"花都中心","花都中心、",false)
+    内容 = Replace(内容,"从化中心","从化中心、",false)
+    内容 = Replace(内容,"天河中心","天河中心、",false)
+    Return 内容
+End Function
+
+//匹配规则与巡视一样
+Function 重要交叉跨越测温(objExcelyuanbiao,核查数据表,当前月份) 
+    number = 2
+    row = Excel.GetRowsCount(objExcelyuanbiao,"重要跨越区段测温")
+    预试计划表子表名 = "重要跨越区段测温"
+    工作表名 = "1.重要交叉跨越测温"
+    新建 = 新建工作表(核查数据表,工作表名) 
+    Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","A1","区段编号",false)
+    Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","B1","线路名称",false)
+    Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","C1","杆塔区段",false)
+    Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","D1","所属班组",false)
+    Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","E1","最近1次完成时间",false)
+    Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","F1","到期提醒",false)
+    Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","G1","跨越等级",false)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"重要跨越区段测温","A4:H"&row,true)
+    // TracePrint(读取区域内容[0][4])
+    For i = 4 To row step 1
+        到期提醒 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,true)
+        If 到期提醒 = 当前月份&"月份需要提醒"
+            Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","A"&number,读取区域内容[i-4][3],false)
+            Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","B"&number,读取区域内容[i-4][1],false)
+            Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","C"&number,读取区域内容[i-4][2],false)
+            Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","D"&number,读取区域内容[i-4][4],false)
+            跨越等级 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AH"&i,true)
+            Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","F"&number,到期提醒,false)
+            Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","G"&number,跨越等级,false)
+            //回填时间
+            // If 最近一次完成时间 = "已取消" 
+            //     Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","E"&number,最近一次完成时间,false)
+            // End If
+            最近一次完成时间 = 最近一次完成(objExcelyuanbiao,i,当前月份,预试计划表子表名) 
+            本月最近一次完成时间 = 本月最近一次完成(objExcelyuanbiao,i,当前月份,预试计划表子表名) 
+            If 最近一次完成时间 <> "" 
+                Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","E"&number,最近一次完成时间,false)
+            Else 
+                Excel.WriteCell(核查数据表,"1.重要交叉跨越测温","E"&number,本月最近一次完成时间,false)
+            End If
+            number = number + 1 
+            中心名称 = 读取区域内容[i-4][4]
+            中心统计 = 各中心统计(中心名称) 
+        End If
+    Next
+    统计 = [白云中心,花都中心,从化中心,天河中心]
+    涉及 = 涉及中心(统计)
+    白云中心 = 0
+    从化中心 = 0
+    花都中心 = 0
+    天河中心 = 0
+    Return 涉及
+End Function
+
+//匹配规则与测温一样
+Function 重要交叉跨越巡视(objExcelyuanbiao,核查数据表,当前月份) 
+    number = 2
+    row = Excel.GetRowsCount(objExcelyuanbiao,"重要跨越区段巡视")
+    预试计划表子表名 = "重要跨越区段巡视"
+    工作表名 = "1.1重要交叉跨越巡视"
+    新建 = 新建工作表(核查数据表,工作表名) 
+    Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","A1","区段编号",false)
+    Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","B1","线路名称",false)
+    Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","C1","杆塔区段",false)
+    Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","D1","所属班组",false)
+    Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","E1","最近1次完成时间",false)
+    Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","F1","到期提醒",false)
+    Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","G1","跨越等级",false)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"重要跨越区段巡视","A4:H"&row,true)
+    // TracePrint(读取区域内容[0][4])
+    For i = 4 To row step 1
+        到期提醒 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,true)
+        最近一次完成时间 = 最近一次完成(objExcelyuanbiao,i,当前月份,预试计划表子表名) 
+        本月最近一次完成时间 = 本月最近一次完成(objExcelyuanbiao,i,当前月份,预试计划表子表名) 
+        If 到期提醒 = 当前月份&"月份需要提醒"
+            Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","A"&number,读取区域内容[i-4][3],false)
+            Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","B"&number,读取区域内容[i-4][1],false)
+            Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","C"&number,读取区域内容[i-4][2],false)
+            Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","D"&number,读取区域内容[i-4][4],false)
+            跨越等级 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AH"&i,true)
+            Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","F"&number,到期提醒,false)
+            Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","G"&number,跨越等级,false)
+            //回填时间
+            // If 最近一次完成时间 = "已取消" 
+            //     Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","E"&number,最近一次完成时间,false)
+            // End If
+            最近一次完成时间 = 最近一次完成(objExcelyuanbiao,i,当前月份,预试计划表子表名) 
+            本月最近一次完成时间 = 本月最近一次完成(objExcelyuanbiao,i,当前月份,预试计划表子表名) 
+            If 最近一次完成时间 <> "" 
+                Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","E"&number,最近一次完成时间,false)
+            Else 
+                Excel.WriteCell(核查数据表,"1.1重要交叉跨越巡视","E"&number,本月最近一次完成时间,false)
+            End If
+            number = number + 1 
+            中心名称 = 读取区域内容[i-4][4]
+            中心统计 = 各中心统计(中心名称) 
+        End If
+    Next
+    统计 = [白云中心,花都中心,从化中心,天河中心]
+    涉及 = 涉及中心(统计)
+    白云中心 = 0
+    从化中心 = 0
+    花都中心 = 0
+    天河中心 = 0
+    Return 涉及
+End Function
+
+
+Function 架空线路接地电阻测试(objExcelyuanbiao,核查数据表,当前月份) 
+    当前月份提醒 = 当前月份&"月份需要提醒"
+    row = Excel.GetRowsCount(objExcelyuanbiao,"2、架空线路接地电阻测试")
+    工作表名 = "2、架空线路接地电阻测试"
+    新建 = 新建工作表(核查数据表,工作表名) 
+    表头 = Excel.ReadRange(objExcelyuanbiao,"2、架空线路接地电阻测试","A3:AF3",true)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"2、架空线路接地电阻测试","A4:AF"&row,true)
+    objDatatable = Datatable.BuildDataTable(读取区域内容,表头[0])
+    objDatatable = Datatable.QueryDataTable(objDatatable,"到期提醒==\""&当前月份提醒&"\"")
+    objDatatable = Datatable.GetDataTableByArray(objDatatable,false)
+    Excel.WriteRow(核查数据表,"2、架空线路接地电阻测试","A1",表头[0],false)
+    For i = 0 To UBound(objDatatable) step 1
+        Excel.WriteRow(核查数据表,"2、架空线路接地电阻测试","A"&i+2,objDatatable[i],false)
+    Next
+End Function
+
+Function 电缆线路交叉互联预试(objExcelyuanbiao,核查数据表,当前月份) 
+    number = 2
+    当前月份提醒 = 当前月份&"月份需要提醒"
+    row = Excel.GetRowsCount(objExcelyuanbiao,"3、电缆线路交叉互联预试")
+    工作表名 = "2.电缆线路交叉互联预试"
+    新建 = 新建工作表(核查数据表,工作表名) 
+    表头 = Excel.ReadRange(objExcelyuanbiao,"3、电缆线路交叉互联预试","A3:AK3",true)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"3、电缆线路交叉互联预试","A4:AK"&row,true)
+    // TracePrint(读取区域内容[0][12])
+    objDatatable = Datatable.BuildDataTable(读取区域内容,表头[0])
+    objDatatable = Datatable.QueryDataTable(objDatatable,"到期提醒==\""&当前月份提醒&"\"")
+    objDatatable = Datatable.GetDataTableByArray(objDatatable,false)
+    Excel.WriteRow(核查数据表,"2.电缆线路交叉互联预试","A1",表头[0],false)
+    For i = 0 To UBound(objDatatable) step 1
+        Excel.WriteRow(核查数据表,"2.电缆线路交叉互联预试","A"&i+2,objDatatable[i],false)
+        number = number + 1 
+        中心名称 = objDatatable[i][12]
+        中心统计 = 各中心统计(中心名称) 
+    Next
+    统计 = [白云中心,花都中心,从化中心,天河中心]
+    涉及 = 涉及中心(统计)
+    白云中心 = 0
+    从化中心 = 0
+    花都中心 = 0
+    天河中心 = 0
+    Return 涉及
+End Function
+
+Function 终端场避雷器试验(objExcelyuanbiao,核查数据表,当前月份) 
+    number = 2
+    当前月份提醒 = 当前月份&"月份需要提醒"
+    row = Excel.GetRowsCount(objExcelyuanbiao,"4、终端场避雷器试验")
+    工作表名 = "3.电缆终端场避雷器试验"
+    新建 = 新建工作表(核查数据表,工作表名) 
+    表头 = Excel.ReadRange(objExcelyuanbiao,"4、终端场避雷器试验","A3:AB3",true)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"4、终端场避雷器试验","A4:AB"&row,true)
+    objDatatable = Datatable.BuildDataTable(读取区域内容,表头[0])
+    objDatatable = Datatable.QueryDataTable(objDatatable,"到期提醒==\""&当前月份提醒&"\"")
+    objDatatable = Datatable.GetDataTableByArray(objDatatable,false)
+    Excel.WriteRow(核查数据表,"3.电缆终端场避雷器试验","A1",表头[0],false)
+    For i = 0 To UBound(objDatatable) step 1
+        Excel.WriteRow(核查数据表,"3.电缆终端场避雷器试验","A"&i+2,objDatatable[i],false)
+        number = number + 1 
+        中心名称 = objDatatable[i][13]
+        中心统计 = 各中心统计(中心名称) 
+    Next
+    统计 = [白云中心,花都中心,从化中心,天河中心]
+    涉及 = 涉及中心(统计)
+    白云中心 = 0
+    从化中心 = 0
+    花都中心 = 0
+    天河中心 = 0
+    Return 涉及
+End Function
+
+Function 电缆护套环流检测 (objExcelyuanbiao,核查数据表,当前月份) 
+    number = 2
+    当前月份提醒 = 当前月份&"月份需要提醒"
+    row = Excel.GetRowsCount(objExcelyuanbiao,"5、电缆护套环流检测")
+    工作表名 = "4.电缆护套环流检测"
+    新建 = 新建工作表(核查数据表,工作表名) 
+    表头 = Excel.ReadRange(objExcelyuanbiao,"5、电缆护套环流检测","A3:Z3",true)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"5、电缆护套环流检测","A4:Z"&row,true)
+    objDatatable = Datatable.BuildDataTable(读取区域内容,表头[0])
+    objDatatable = Datatable.QueryDataTable(objDatatable,"到期提醒==\""&当前月份提醒&"\"")
+    objDatatable = Datatable.GetDataTableByArray(objDatatable,false)
+    Excel.WriteRow(核查数据表,"4.电缆护套环流检测","A1",表头[0],false)
+    For i = 0 To UBound(objDatatable) step 1
+        Excel.WriteRow(核查数据表,"4.电缆护套环流检测","A"&i+2,objDatatable[i],false)
+        number = number + 1 
+        中心名称 = objDatatable[i][11]
+        中心统计 = 各中心统计(中心名称) 
+    Next
+    统计 = [白云中心,花都中心,从化中心,天河中心]
+    涉及 = 涉及中心(统计)
+    白云中心 = 0
+    从化中心 = 0
+    花都中心 = 0
+    天河中心 = 0
+    Return 涉及
+End Function
+
+Function 电缆终端红外检测(objExcelyuanbiao,核查数据表,当前月份) 
+    number = 2
+    当前月份提醒 = 当前月份&"月份需要提醒"
+    row = Excel.GetRowsCount(objExcelyuanbiao,"6、电缆终端红外检测")
+    工作表名 = "5.电缆终端红外检测"
+    新建 = 新建工作表(核查数据表,工作表名) 
+    表头 = Excel.ReadRange(objExcelyuanbiao,"6、电缆终端红外检测","A3:Z3",true)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"6、电缆终端红外检测","A4:Z"&row,true)
+    objDatatable = Datatable.BuildDataTable(读取区域内容,表头[0])
+    objDatatable = Datatable.QueryDataTable(objDatatable,"到期提醒==\""&当前月份提醒&"\"")
+    objDatatable = Datatable.GetDataTableByArray(objDatatable,false)
+    Excel.WriteRow(核查数据表,"5.电缆终端红外检测","A1",表头[0],false)
+    For i = 0 To UBound(objDatatable) step 1
+        Excel.WriteRow(核查数据表,"5.电缆终端红外检测","A"&i+2,objDatatable[i],false)
+        number = number + 1 
+        中心名称 = objDatatable[i][11]
+        中心统计 = 各中心统计(中心名称) 
+    Next
+    统计 = [白云中心,花都中心,从化中心,天河中心]
+    涉及 = 涉及中心(统计)
+    白云中心 = 0
+    从化中心 = 0
+    花都中心 = 0
+    天河中心 = 0
+    Return 涉及
+End Function
+
+Function 避雷器红外检测(objExcelyuanbiao,核查数据表,当前月份) 
+    number = 2
+    当前月份提醒 = 当前月份&"月份需要提醒"
+    row = Excel.GetRowsCount(objExcelyuanbiao,"7、避雷器红外检测")
+    工作表名 = "6.电缆避雷器红外检"
+    新建 = 新建工作表(核查数据表,工作表名) 
+    表头 = Excel.ReadRange(objExcelyuanbiao,"7、避雷器红外检测","A3:Z3",true)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"7、避雷器红外检测","A4:Z"&row,true)
+    objDatatable = Datatable.BuildDataTable(读取区域内容,表头[0])
+    objDatatable = Datatable.QueryDataTable(objDatatable,"到期提醒==\""&当前月份提醒&"\"")
+    objDatatable = Datatable.GetDataTableByArray(objDatatable,false)
+    Excel.WriteRow(核查数据表,"6.电缆避雷器红外检","A1",表头[0],false)
+    For i = 0 To UBound(objDatatable) step 1
+        Excel.WriteRow(核查数据表,"6.电缆避雷器红外检","A"&i+2,objDatatable[i],false)
+        number = number + 1 
+        中心名称 = objDatatable[i][11]
+        中心统计 = 各中心统计(中心名称) 
+    Next
+    统计 = [白云中心,花都中心,从化中心,天河中心]
+    涉及 = 涉及中心(统计)
+    白云中心 = 0
+    从化中心 = 0
+    花都中心 = 0
+    天河中心 = 0
+    Return 涉及
+End Function
+
+Function 非直埋式中间接头红外检测(objExcelyuanbiao,核查数据表,当前月份) 
+    number = 2
+    当前月份提醒 = 当前月份&"月份需要提醒"
+    row = Excel.GetRowsCount(objExcelyuanbiao,"8、非直埋式中间接头红外检测 ")
+    工作表名 = "7.非直埋式中间接头红外检测 "
+    新建 = 新建工作表(核查数据表,工作表名) 
+    表头 = Excel.ReadRange(objExcelyuanbiao,"8、非直埋式中间接头红外检测 ","A3:Z3",true)
+    读取区域内容 = Excel.ReadRange(objExcelyuanbiao,"8、非直埋式中间接头红外检测 ","A4:Z"&row,true)
+    objDatatable = Datatable.BuildDataTable(读取区域内容,表头[0])
+    objDatatable = Datatable.QueryDataTable(objDatatable,"到期提醒==\""&当前月份提醒&"\"")
+    objDatatable = Datatable.GetDataTableByArray(objDatatable,false)
+    Excel.WriteRow(核查数据表,"7.非直埋式中间接头红外检测 ","A1",表头[0],false)
+    For i = 0 To UBound(objDatatable) step 1
+        Excel.WriteRow(核查数据表,"7.非直埋式中间接头红外检测 ","A"&i+2,objDatatable[i],false)
+        number = number + 1 
+        中心名称 = objDatatable[i][11]
+        中心统计 = 各中心统计(中心名称) 
+    Next
+    统计 = [白云中心,花都中心,从化中心,天河中心]
+    涉及 = 涉及中心(统计)
+    白云中心 = 0
+    从化中心 = 0
+    花都中心 = 0
+    天河中心 = 0
+    Return 涉及
+End Function
+
+If 天数 > 15
+    重要交跨测温 = 重要交叉跨越测温(objExcelyuanbiao,核查数据表,当前月份)
+    If 重要交跨测温 <> "" 
+        重要交跨测温替换 = 替换(重要交跨测温)
+        重要交跨测温替换 = RTrim(重要交跨测温替换,"、")
+        总数 = number-2
+        当月提醒1 = "测温待完成数据"+总数+"条"+","+"涉及"+重要交跨测温替换
+        TracePrint(当月提醒1)
+    Else 
+        当月提醒1 = "测温暂无提醒数据"
+        TracePrint(当月提醒1)
+    End If
+
+    重要交跨巡视 = 重要交叉跨越巡视(objExcelyuanbiao,核查数据表,当前月份)
+    If 重要交跨巡视 <> "" 
+        重要交跨巡视替换 = 替换(重要交跨巡视)
+        重要交跨巡视替换 = RTrim(重要交跨巡视替换,"、")
+        总数 = number-2
+        当月提醒11= "1.重要交叉跨越日常巡视待完成数据"+总数+"条"+","+"涉及"+重要交跨巡视替换
+        TracePrint(当月提醒11)
+    Else 
+        当月提醒11 = "1.重要交叉跨越日常巡视暂无提醒数据"
+        TracePrint(当月提醒11)
+    End If
+
+    // //一年一测，暂时不需要检查
+    // // 第二架空线路接地电阻测试 = 架空线路接地电阻测试(objExcelyuanbiao,核查数据表,当前月份)
+    // // TracePrint("已完成架空线路接地电阻测试核查数据")
+
+    第三电缆线路交叉互联预试 = 电缆线路交叉互联预试(objExcelyuanbiao,核查数据表,当前月份) 
+    If 第三电缆线路交叉互联预试 <> ""
+        第三电缆线路交叉互联预试替换 = 替换(第三电缆线路交叉互联预试)
+        第三电缆线路交叉互联预试替换 = RTrim(第三电缆线路交叉互联预试替换,"、")
+        总数 = number-2
+        TracePrint("2.电缆线路交叉互联预试待完成数据"+总数+"条"+","+"涉及"+第三电缆线路交叉互联预试替换)
+        当月提醒2 = "2.电缆线路交叉互联预试待完成数据"+总数+"条"+","+"涉及"+第三电缆线路交叉互联预试替换
+    Else 
+        TracePrint("2.电缆线路交叉互联预试待暂无提醒数据")
+        当月提醒2 = "2.电缆线路交叉互联预试待暂无提醒数据"
+    End If
+
+    第四终端场避雷器试验 = 终端场避雷器试验(objExcelyuanbiao,核查数据表,当前月份)
+    If 第四终端场避雷器试验 <> ""
+        第四终端场避雷器试验替换 = 替换(第四终端场避雷器试验)
+        第四终端场避雷器试验替换 = RTrim(第四终端场避雷器试验替换,"、")
+        总数 = number-2
+        TracePrint("3.电缆终端场避雷器试验待完成数据"+总数+"条"+","+"涉及"+第四终端场避雷器试验替换)
+        当月提醒3 = "3.电缆终端场避雷器试验待完成数据"+总数+"条"+","+"涉及"+第四终端场避雷器试验替换
+    Else 
+        TracePrint("3.电缆终端场避雷器试验待暂无提醒数据")
+        当月提醒3 = "3.电缆终端场避雷器试验待暂无提醒数据"
+    End If
+
+    第五电缆护套环流检测 = 电缆护套环流检测 (objExcelyuanbiao,核查数据表,当前月份) 
+    If 第五电缆护套环流检测 <> ""
+        第五电缆护套环流检测替换 = 替换(第五电缆护套环流检测)
+        第五电缆护套环流检测替换 = RTrim(第五电缆护套环流检测替换,"、")
+        总数 = number-2
+        TracePrint("4.电缆护套环流检测待完成数据"+总数+"条"+","+"涉及"+第五电缆护套环流检测替换)
+        当月提醒4 = "4.电缆护套环流检测待完成数据"+总数+"条"+","+"涉及"+第五电缆护套环流检测替换
+    Else 
+        TracePrint("4.电缆护套环流检测暂无提醒数据")
+        当月提醒4 = "4.电缆护套环流检测暂无提醒数据"
+    End If
+
+    第六电缆终端红外检测 = 电缆终端红外检测(objExcelyuanbiao,核查数据表,当前月份) 
+    If 第六电缆终端红外检测 <> ""
+        第六电缆终端红外检测替换 = 替换(第六电缆终端红外检测)
+        第六电缆终端红外检测替换 = RTrim(第六电缆终端红外检测替换,"、")
+        总数 = number-2
+        TracePrint("5.电缆终端红外检测待完成数据"+总数+"条"+","+"涉及"+第六电缆终端红外检测替换)
+        当月提醒5 = "5.电缆终端红外检测待完成数据"+总数+"条"+","+"涉及"+第六电缆终端红外检测替换
+    Else 
+        TracePrint("5.电缆终端红外检测暂无提醒数据")
+        当月提醒5 = "5.电缆终端红外检测暂无提醒数据"
+    End If
+
+    第七避雷器红外检测 = 避雷器红外检测(objExcelyuanbiao,核查数据表,当前月份) 
+    If 第七避雷器红外检测 <> ""
+        第七避雷器红外检测替换 = 替换(第七避雷器红外检测)
+        第七避雷器红外检测替换 = RTrim(第七避雷器红外检测替换,"、")
+        总数 = number-2
+        TracePrint("6.电缆避雷器红外检测待完成数据"+总数+"条"+","+"涉及"+第七避雷器红外检测替换)
+        当月提醒6 = "6.电缆避雷器红外检测待完成数据"+总数+"条"+","+"涉及"+第七避雷器红外检测替换
+    Else 
+        TracePrint("6.电缆避雷器红外检测暂无提醒数据")
+        当月提醒6 = "6.电缆避雷器红外检测暂无提醒数据"
+    End If
+
+    第八非直埋式中间接头红外检测  = 非直埋式中间接头红外检测(objExcelyuanbiao,核查数据表,当前月份) 
+    If 第八非直埋式中间接头红外检测 <> ""
+        第八非直埋式中间接头红外检测替换 = 替换(第八非直埋式中间接头红外检测)
+        第八非直埋式中间接头红外检测替换 = RTrim(第八非直埋式中间接头红外检测替换,"、")
+        总数 = number-2
+        TracePrint("7.非直埋式中间接头红外检测待完成数据"+总数+"条"+","+"涉及"+第八非直埋式中间接头红外检测替换)
+        当月提醒7 = "7.非直埋式中间接头红外检测待完成数据"+总数+"条"+","+"涉及"+第八非直埋式中间接头红外检测替换
+    Else 
+        TracePrint("7.非直埋式中间接头红外检测暂无提醒数据")
+        当月提醒7 = "7.非直埋式中间接头红外检测暂无提醒数据"
+    End If
+
+    Excel.DeleteSheet(核查数据表,"Sheet1",false)
+    Excel.CloseExcel(核查数据表,true)
+    当前日期 = time.Format(time.Now(),"yyyy-mm-dd")
+    当前年份 = time.year(Time.CDate(当前日期,"yyyy.mm.dd"))  //2024
+    当前月份 = time.Month(Time.CDate(当前日期,"yyyy.mm.dd")) //
+    TracePrint(当前日期)
+    TracePrint(当前年份)
+    TracePrint(当前月份)
+
+    到期提醒 = 当前日期+"  "+当前月份+"月到期预试计划RPA智能监控核查预警数据："+"\n"+当月提醒11+";"+当月提醒1+";"+"\n"+当月提醒2+";"+"\n"+当月提醒3+";"+"\n"+当月提醒4+";"+"\n"+当月提醒5+";"+"\n"+当月提醒6+";"+"\n"+当月提醒7+";"+"\n"+"具体数据详见《输电二所2024年预试计划核查问题记录表》。"
+    TracePrint(到期提醒)
+    // 到期提醒 = [当前日期,当前月份,当月提醒1,当月提醒2,当月提醒3,当月提醒4,当月提醒5,当月提醒6,当月提醒7,当月提醒11]
+    back = push(back,到期提醒)
+    Excel.CloseExcel(objExcelyuanbiao,true)
+Else 
+    到期提醒 = "暂时不用核查提醒数据"
+    back = push(back,到期提醒)
+    Excel.CloseExcel(objExcelyuanbiao,true)
+End If
+Return back

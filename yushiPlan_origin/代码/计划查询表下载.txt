@@ -1,0 +1,237 @@
+Dim re = self.input, hWeb
+需要匹配的月份 = re[0]
+计划开始时间 = re[1]
+计划结束时间 = re[2]
+保存路径 = re[3]
+预试检测计划文件名 = re[4]
+
+
+
+//绑定网页并关闭浏览器
+Dim objUiElement
+hWeb = WebBrowser.BindBrowser("uibotbrowser", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+If 标题 = "首页" 
+	WebBrowser.Close(hWeb,{"bContinueOnError":false,"iDelayAfter":300,"iDelayBefore":200})
+End If
+hWeb = WebBrowser.BindBrowser("uibotbrowser", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+一窗标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+If 标题 = "一窗通办" 
+	WebBrowser.Close(hWeb,{"bContinueOnError":false,"iDelayAfter":300,"iDelayBefore":200})
+End If
+
+//启动新的浏览器
+hWeb = WebBrowser.Create("uibotbrowser", "", 30000, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200, "sBrowserPath": "", "sStartArgs": ""})
+// //网页最大化
+hWeb = WebBrowser.GoURL(hWeb, "https://10.150.130.163/isc_sso/login", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+Window.SetActive(@ui"窗口_内置浏览器")
+Window.Show(@ui"窗口_内置浏览器", "max")
+
+Function 登录(hweb)
+	Delay(5000)
+	// hWeb = WebBrowser.WaitPage(hWeb, @ui"点击登录<input>_登录", 60000, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"列表项<li>_账号登录", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"账号<input>", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Keyboard.InputText(@ui"账号<input>", "sejqr@gzps.corp.csg", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	Mouse.Action(@ui"输入密码<input>", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Keyboard.InputText(@ui"输入密码<input>", "Jqr@0819", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	//滑块验证
+	Mouse.Action(@ui"登录滑块<span>", "left", "down", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	滑块坐标 = Mouse.GetPos()
+	滑块开始坐标 = 获取鼠标坐标并滑动(滑块坐标)
+	Mouse.Drag(滑块开始坐标[0], 滑块开始坐标[1], 1142, 507, "left", [], {"iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"点击登录<input>_登录", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Delay(5000)
+End Function
+
+Function 获取鼠标坐标并滑动(滑块坐标)
+	i = 0
+	b = []
+	For Each key, value In 滑块坐标
+		b = insert(b, i, value)
+		i = i+1
+	Next 
+	Return b
+End Function
+
+Function 一窗通办(hWeb)
+	bRet = UiElement.Exists(@ui"一窗通办<a>_全部应用", {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If bRet = true
+		UiElement.Wait(@ui"一窗通办<a>_全部应用", "show", 100000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		Mouse.Action(@ui"一窗通办<a>_全部应用", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+		UiElement.Wait(@ui"一窗通办<a>_电网管理平台资产域", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		Mouse.Action(@ui"一窗通办<a>_电网管理平台资产域", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	else
+		WebBrowser.Refresh(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		Delay(10000)
+		UiElement.Wait(@ui"一窗通办<a>_全部应用", "show", 100000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		Mouse.Action(@ui"一窗通办<a>_全部应用", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+		UiElement.Wait(@ui"一窗通办<a>_电网管理平台资产域", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		Mouse.Action(@ui"一窗通办<a>_电网管理平台资产域", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+
+	End If
+End Function
+
+Function 电网管理平台资产域维护检修管理(hWeb)
+	UiElement.Wait(@ui"电网管理平台资产域<span>全部应用", "show", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"电网管理平台资产域<span>全部应用", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Keyboard.InputText(@ui"电网管理平台资产域<input>搜索应用输入框", "维护检修管理", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	Mouse.Action(@ui"电网管理平台资产域<i>搜索按钮", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"电网管理平台资产域<span>_维护检修管理", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"电网管理平台资产域<span>_维护检修管理", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+
+End Function
+
+
+Function 维护检修管理查询(hWeb, 计划开始时间, 计划结束时间)
+	UiElement.Wait(@ui"维护检修管理<span>_查询", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"维护检修管理<span>_查询", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"维护检修管理<a>_更多按钮", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"维护检修管理<a>_更多按钮", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Mouse.Action(@ui"维护检修管理<input>_计划开始时间输入框", "left", "dbclick", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Clipboard.SetText(计划开始时间)
+	Keyboard.Press("V", "press", ["Ctrl"], {"iDelayAfter": 300, "iDelayBefore": 200, "sSimulate": "simulate"})
+	Mouse.Action(@ui"维护检修管理<input>_计划结束时间输入框", "left", "dbclick", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Clipboard.SetText(计划结束时间)
+	Keyboard.Press("V", "press", ["Ctrl"], {"iDelayAfter": 300, "iDelayBefore": 200, "sSimulate": "simulate"})
+	Keyboard.InputText(@ui"维护检修管理<div>工作班组输入框", "输电管理二所", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	Mouse.Action(@ui"维护检修管理<a>_工作班组按钮（输电管理二所）", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Keyboard.InputText(@ui"维护检修管理<input>计划状态输入框", "待确认;已完成", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	Mouse.Action(@ui"维护检修管理<input>工作类别输入框", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Keyboard.InputText(@ui"维护检修管理<input>工作类别输入框", "巡视;预试;测量", true, 20, 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 500, "bSetForeground": true, "sSimulate": "message", "bValidate": false, "bClickBeforeInput": false})
+	Keyboard.Press("Enter", "press", [], {"iDelayAfter": 0, "iDelayBefore": 0, "sSimulate": "simulate"})
+	UiElement.Wait(@ui"维护检修管理<button>_导出按钮（外面）", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"维护检修管理<button>_导出按钮（外面）", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 0, "iDelayBefore": 0, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"维护检修管理<a>_导出（选项）", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"维护检修管理<a>_导出（选项）", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 0, "iDelayBefore": 100, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	UiElement.Wait(@ui"导出界面<div>_列名称", "show", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	Mouse.Action(@ui"导出界面<i>全选字段按钮", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	Mouse.Action(@ui"导出界面<button>_导出文件按钮", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+
+End Function
+
+Function 文件保存(保存路径)
+	Delay(10000)
+	保存窗口 = Window.Exists(@ui"保存文件窗口（计划查询表）")
+	bRet = UiElement.Exists(@ui"交叉跨越<a>导出excel报错关闭", {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	CRet = UiElement.Exists(@ui"错误导出<a>", {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If 保存窗口 = True
+		Window.Show(@ui"保存文件窗口（计划查询表）", "max")
+		Rem 路径选择的时候需要取消下面的CSS元素（cnd）
+		Mouse.Action(@ui"窗口_地址:下载", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+		Rem 保存路径
+		Clipboard.SetText(保存路径)
+		Keyboard.Press("V", "press", ["Ctrl"], {"iDelayAfter": 300, "iDelayBefore": 200, "sSimulate": "simulate"})
+		Keyboard.Press("Enter", "press", [], {"iDelayAfter": 300, "iDelayBefore": 200, "sSimulate": "simulate"})
+		Mouse.Action(@ui"窗口_保存(S)", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	ElseIf bRet = True or CRet = True
+		Mouse.Action(@ui"交叉跨越<a>导出excel报错关闭", "left", "click", 10000, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+		Mouse.Action(@ui"错误导出<a>", "left", "click", 10000, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+		Mouse.Action(@ui"跨越铁路<i>下载按钮", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+		Window.Show(@ui"保存文件窗口（计划查询表）", "max")
+		Rem 路径选择的时候需要取消下面的CSS元素（cnd）
+		Mouse.Action(@ui"窗口_地址:下载", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+		Rem 保存路径
+		Clipboard.SetText(保存路径)
+		Keyboard.Press("V", "press", ["Ctrl"], {"iDelayAfter": 300, "iDelayBefore": 200, "sSimulate": "simulate"})
+		Keyboard.Press("Enter", "press", [], {"iDelayAfter": 300, "iDelayBefore": 200, "sSimulate": "simulate"})
+		Mouse.Action(@ui"窗口_保存(S)", "left", "click", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200, "bSetForeground": true, "sCursorPosition": "Center", "iCursorOffsetX": 0, "iCursorOffsetY": 0, "sKeyModifiers": [], "sSimulate": "simulate", "bMoveSmoothly": false})
+	End If
+End Function
+
+Try 
+	hWeb = WebBrowser.BindBrowser("uibotbrowser", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	登录标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If 登录标题 = "登录"
+		登录界面 = 登录(hweb)
+	else
+		登录页面打开一窗通办 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	End If
+Catch error
+	TracePrint("登录界面错误，正在重新运行")
+	TracePrint(error)
+	hWeb = WebBrowser.BindBrowser("uibotbrowser", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	登录标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If 登录标题 = "登录"
+		登录界面 = 登录(hweb)
+	else
+		登录页面打开一窗通办 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	End If
+End Try
+
+
+rem 计划查询表
+Try 
+	hWeb = WebBrowser.BindBrowser("uibotbrowser", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	一窗通办标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If 一窗通办标题 = "一窗通办"
+		一窗 = 一窗通办(hWeb)
+	else
+		//在原页面刷新并打开
+		打开一窗通办 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		一窗 = 一窗通办(hWeb)
+	End If
+Catch error
+	TracePrint("一窗通办流程错误，正在重新运行")
+	TracePrint(error)
+	hWeb = WebBrowser.BindBrowser("uibotbrowser", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	一窗通办标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If 一窗通办标题 = "一窗通办"
+		一窗 = 一窗通办(hWeb)
+	else
+		//在原页面刷新并打开
+		打开一窗通办 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		一窗 = 一窗通办(hWeb)
+	End If
+End Try
+
+Try 
+	hWeb = WebBrowser.BindBrowser("uibotbrowser", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	电网管理平台标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If 电网管理平台标题 = "首页"
+		电网管理平台 = 电网管理平台资产域维护检修管理(hWeb)
+	else
+		//在原页面刷新并打开
+		打开电网管理平台 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		电网一窗 = 一窗通办(hWeb)
+		电网管理平台 = 电网管理平台资产域维护检修管理(hWeb)
+	End If
+Catch error
+	TracePrint("电网管理平台资产域页面错误，正在重新运行")
+	TracePrint(error)
+	hWeb = WebBrowser.BindBrowser("uibotbrowser", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	电网管理平台标题 = WebBrowser.GetTitle(hWeb, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	If 电网管理平台标题 = "首页"
+		电网管理平台 = 电网管理平台资产域维护检修管理(hWeb)
+	else
+		//在原页面刷新并打开
+		打开电网管理平台 = WebBrowser.GoURL(hWeb, "http://10.150.130.161/isc-portal/iscPortal/getUser", true, {}, 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+		电网一窗 = 一窗通办(hWeb)
+		电网管理平台 = 电网管理平台资产域维护检修管理(hWeb)
+	End If
+End Try
+
+Try 
+	维护检修管理 = 维护检修管理查询(hWeb, 计划开始时间, 计划结束时间)
+	保存 = 文件保存(保存路径)
+Catch error
+	TracePrint("计划查询表流程错误（包含文件保存），正在重新运行")
+	TracePrint(error)
+	hWeb = WebBrowser.BindBrowser("uibotbrowser", 30000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+	WebBrowser.Refresh(hWeb, {"bContinueOnError": true, "iDelayAfter": 300, "iDelayBefore": 200})
+	维护检修管理 = 维护检修管理查询(hWeb, 计划开始时间, 计划结束时间)
+	保存 = 文件保存(保存路径)
+End Try
+//关闭维护检修管理页面
+维护检修管理页面 = WebBrowser.BindBrowser("uibotbrowser", 10000, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+WebBrowser.Close(维护检修管理页面, {"bContinueOnError": false, "iDelayAfter": 300, "iDelayBefore": 200})
+
+
+Delay(5000)
+计划查询表路径 = File.SearchFile(保存路径, "*计划查询列表*", true)
+计划查询表文件名 = Replace(计划查询表路径[0], 保存路径, "", false)
+//打开计划查询列表
+objExcelyuanbiao = Excel.OpenExcel(计划查询表路径[0], false, "Excel", "", "") //路径+文件是否可见
+Delay(5000)
+back = [需要匹配的月份, 预试检测计划文件名, 计划查询表文件名, 保存路径]
+Return back

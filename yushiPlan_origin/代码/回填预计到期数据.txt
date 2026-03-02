@@ -1,0 +1,466 @@
+
+//已完成
+Dim objExcelWorkBook, objExcelyuanbiao, objDatatableID, arrID, arrayRet, objDatatable, objSetRet, bRet
+Dim arrRow
+Dim section
+Dim SixMonths
+Dim back = self.input
+当前月份 = back[0]
+预试检测计划文件名 = back[1]
+计划查询表文件名 = back[2]
+// 预试检测计划文件名 = "输电管理二所2024年预试检测计划.xlsx"
+objExcelyuanbiao = Excel.BindBook(预试检测计划文件名)
+当前日期 = time.Format(time.Now(),"yyyy-mm-dd hh:mm:ss")
+当前年份 = time.year(Time.CDate(当前日期,"yyyy.mm.dd"))  //2024
+// 当前月份 = time.Month(Time.CDate(当前日期,"yyyy.mm.dd")) //
+// 当前月份 = 7
+
+// 等同def
+Function 两月一测(计划结束月份,当前月份)
+    If (计划结束月份 = 1 or 计划结束月份 = 2)
+        section = 2
+    ElseIf (计划结束月份 = 3 or 计划结束月份 = 4)
+        section = 4
+    ElseIf (计划结束月份 = 5 or 计划结束月份 = 6)
+        section = 6
+    ElseIf (计划结束月份 = 7 or 计划结束月份 = 8)
+        section = 8
+    ElseIf (计划结束月份 = 9 or 计划结束月份 = 10)
+        section = 10
+    ElseIf (计划结束月份 = 11 or 计划结束月份 = 12)
+        section = 12
+    End If
+
+    If 当前月份 = 1 Or 当前月份 = 3 Or 当前月份 = 5 Or 当前月份 = 7 Or 当前月份 = 9 Or 当前月份 = 11
+        两月一测当前月份 =  当前月份 + 1
+    else
+        两月一测当前月份 = 当前月份
+    End If
+    两月 = [section,两月一测当前月份]
+    Return 两月
+    
+End Function
+
+Function 六月一测(计划结束月份,当前月份) 
+    六月 = []
+    If (计划结束月份 = 1 or 计划结束月份 = 2 or 计划结束月份 = 3 or 计划结束月份 = 4 or 计划结束月份 = 5 or 计划结束月份 = 6)
+        section = 6
+    ElseIf (计划结束月份 = 7 or 计划结束月份 = 8 or 计划结束月份 = 9 or 计划结束月份 = 10 or 计划结束月份 = 11 or 计划结束月份 = 12)
+        section = 12
+    end if
+    六月 = [section]
+    Return 六月
+End Function
+
+Function 三月一测(计划结束月份,当前月份) 
+    三月 = []
+    If (计划结束月份 = 1 or 计划结束月份 = 2 or 计划结束月份 = 3)
+        section = 3
+    ElseIf (计划结束月份 = 4 or 计划结束月份 = 5 or 计划结束月份 = 6)
+        section = 6
+    ElseIf (计划结束月份 = 7 or 计划结束月份 = 8 or 计划结束月份 = 9)
+        section = 9
+    ElseIf 计划结束月份 = 10 or 计划结束月份 = 11 or 计划结束月份 = 12
+        section = 12
+    end if
+    六月 = [section]
+    Return 六月
+End Function
+
+Function 其余时段(计划结束月份,当前月份,其余时段匹配,完成状态) 
+    If 其余时段匹配 = True And 完成状态 = "" and 计划结束月份 = 当前月份
+        Return "其余时段成立"
+    End If
+End Function
+
+Function 电缆护套环流检测(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    //读取线路名和结束时间 并筛选出月份，最后转成数组
+    原表 = Excel.ReadRange(objExcelyuanbiao, "5、电缆护套环流检测", "D4:H815", false)
+    原表 = Datatable.BuildDataTable(原表, ["线路名称", "线路重要度", "工作内容", "计划开始日期", "计划结束日期"])
+    //创建新的数据表
+    原表 = Datatable.SelectDataTableColumns(原表, ["线路名称", "计划开始日期", "计划结束日期","线路重要度"])
+    arrayShape = Datatable.GetDataTableShape(原表)
+    原表数组 = Datatable.GetDataTableByArray(原表, false)
+
+    For i = 0 To UBound(原表数组) step 1
+        线路重要度 = 原表数组[i][3]
+        其余时段匹配 = Regex.Test(线路重要度,"其余时段")
+        完成状态 = Excel.ReadCell(objExcelyuanbiao,"5、电缆护套环流检测","X"&i+4,true)
+        计划结束年份 = Time.Year(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+        计划结束月份 = Time.Month(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+
+        两月 = 两月一测(计划结束月份,当前月份)
+        六月 = 六月一测(计划结束月份,当前月份)
+        其余 = 其余时段(计划结束月份,当前月份,其余时段匹配,完成状态) 
+        If 计划结束年份 =  当前年份
+            If 两月[0] = 两月[1] And 完成状态 = "" And (线路重要度 = "关键" Or 线路重要度 = "重要") And 两月[0] = 当前月份
+                Excel.WriteCell(objExcelyuanbiao,"5、电缆护套环流检测","Z"&i+4,当前月份&"月份需要提醒",false)
+            ElseIf 其余 = "其余时段成立" 
+                Excel.WriteCell(objExcelyuanbiao,"5、电缆护套环流检测","Z"&i+4,计划结束月份&"月份需要提醒",false)
+            ElseIf 六月[0] = 当前月份 And 完成状态 = "" And (线路重要度 = "一般" Or 线路重要度 = "关注") 
+                Excel.WriteCell(objExcelyuanbiao,"5、电缆护套环流检测","Z"&i+4,当前月份&"月份需要提醒",false)
+            End If
+        End If
+    Next
+End Function
+
+Function 电缆终端红外检测(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    //读取线路名和结束时间 并筛选出月份，最后转成数组
+    原表 = Excel.ReadRange(objExcelyuanbiao, "6、电缆终端红外检测", "C4:H658", false)
+    原表 = Datatable.BuildDataTable(原表, ["电压等级","线路名称", "线路重要度", "工作内容", "计划开始日期", "计划结束日期"])
+    //创建新的数据表
+    原表 = Datatable.SelectDataTableColumns(原表, ["线路名称", "计划开始日期", "计划结束日期","线路重要度","电压等级"])
+    arrayShape = Datatable.GetDataTableShape(原表)
+    原表数组 = Datatable.GetDataTableByArray(原表, false)
+    // TracePrint(arrayShape[0]) //行数统计
+
+    For i = 0 To UBound(原表数组) step 1
+        线路重要度 = 原表数组[i][3]
+        其余时段匹配 = Regex.Test(线路重要度,"其余时段")
+        完成状态 = Excel.ReadCell(objExcelyuanbiao,"6、电缆终端红外检测","X"&i+4,true)
+        电压等级 = 原表数组[i][4]
+        计划结束年份 = Time.Year(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+        计划结束月份 = Time.Month(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+        两月 = 两月一测(计划结束月份,当前月份)
+        六月 = 六月一测(计划结束月份,当前月份)
+        三月 = 三月一测(计划结束月份,当前月份)
+        其余 = 其余时段(计划结束月份,当前月份,其余时段匹配,完成状态) 
+        If 计划结束年份 =  当前年份
+            If 两月[0] = 两月[1] And 完成状态 = "" And (线路重要度 = "关键" Or 线路重要度 = "重要")  And 两月[0] = 当前月份
+                Excel.WriteCell(objExcelyuanbiao,"6、电缆终端红外检测","Z"&i+4,当前月份&"月份需要提醒",false)
+            ElseIf 其余 = "其余时段成立" 
+                Excel.WriteCell(objExcelyuanbiao,"6、电缆终端红外检测","Z"&i+4,计划结束月份&"月份需要提醒",false)
+            ElseIf 完成状态 = "" And (线路重要度 = "一般" Or 线路重要度 = "关注") 
+                If 电压等级 = "110kV" And 六月[0] = 当前月份
+                    Excel.WriteCell(objExcelyuanbiao,"6、电缆终端红外检测","Z"&i+4,六月[0]&"月份需要提醒",false)
+                ElseIf 电压等级 = "220kV" And 三月[0] = 当前月份
+                    Excel.WriteCell(objExcelyuanbiao,"6、电缆终端红外检测","Z"&i+4,三月[0]&"月份需要提醒",false)
+                End If
+            End If
+        End If
+    Next
+    
+End Function
+
+Function 避雷器红外检测(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    //读取线路名和结束时间 并筛选出月份，最后转成数组
+    原表 = Excel.ReadRange(objExcelyuanbiao, "7、避雷器红外检测", "C4:H375", false)
+    原表 = Datatable.BuildDataTable(原表, ["电压等级","线路名称", "线路重要度", "工作内容", "计划开始日期", "计划结束日期"])
+    //创建新的数据表
+    原表 = Datatable.SelectDataTableColumns(原表, ["线路名称", "计划开始日期", "计划结束日期","线路重要度","电压等级"])
+    arrayShape = Datatable.GetDataTableShape(原表)
+    原表数组 = Datatable.GetDataTableByArray(原表, false)
+    For i = 0 To UBound(原表数组) step 1
+        线路重要度 = 原表数组[i][3]
+        其余时段匹配 = Regex.Test(线路重要度,"其余时段")
+        完成状态 = Excel.ReadCell(objExcelyuanbiao,"7、避雷器红外检测","X"&i+4,true)
+        电压等级 = 原表数组[i][4]
+        计划结束年份 = Time.Year(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+        计划结束月份 = Time.Month(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+
+        两月 = 两月一测(计划结束月份,当前月份)
+        六月 = 六月一测(计划结束月份,当前月份)
+        三月 = 三月一测(计划结束月份,当前月份)
+        其余 = 其余时段(计划结束月份,当前月份,其余时段匹配,完成状态) 
+        If 计划结束年份 =  当前年份
+            If 两月[0] = 两月[1] And 完成状态 = "" And (线路重要度 = "关键" Or 线路重要度 = "重要")  And 两月[0] = 当前月份
+                Excel.WriteCell(objExcelyuanbiao,"7、避雷器红外检测","Z"&i+4,当前月份&"月份需要提醒",false)
+            ElseIf 其余 = "其余时段成立" 
+                Excel.WriteCell(objExcelyuanbiao,"7、避雷器红外检测","Z"&i+4,计划结束月份&"月份需要提醒",false)
+            ElseIf 完成状态 = "" And (线路重要度 = "一般" Or 线路重要度 = "关注") 
+                If 电压等级 = "110kV" And 六月[0] = 当前月份
+                    Excel.WriteCell(objExcelyuanbiao,"7、避雷器红外检测","Z"&i+4,六月[0]&"月份需要提醒",false)
+                ElseIf 电压等级 = "220kV" And 三月[0] = 当前月份
+                    Excel.WriteCell(objExcelyuanbiao,"7、避雷器红外检测","Z"&i+4,三月[0]&"月份需要提醒",false)
+                End If
+            End If
+        End If
+    Next
+End Function
+
+Function 非直埋式中间接头红外检测(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    //读取线路名和结束时间 并筛选出月份，最后转成数组=
+    原表 = Excel.ReadRange(objExcelyuanbiao, "8、非直埋式中间接头红外检测 ", "C4:H505", false)
+    原表 = Datatable.BuildDataTable(原表, ["电压等级","线路名称", "线路重要度", "工作内容", "计划开始日期", "计划结束日期"])
+    //创建新的数据表
+    原表 = Datatable.SelectDataTableColumns(原表, ["线路名称", "计划开始日期", "计划结束日期","线路重要度","电压等级"])
+    arrayShape = Datatable.GetDataTableShape(原表)
+    原表数组 = Datatable.GetDataTableByArray(原表, false)
+    For i = 0 To UBound(原表数组) step 1
+        线路重要度 = 原表数组[i][3]
+        其余时段匹配 = Regex.Test(线路重要度,"其余时段")
+        完成状态 = Excel.ReadCell(objExcelyuanbiao,"8、非直埋式中间接头红外检测 ","X"&i+4,true)
+        电压等级 = 原表数组[i][4]
+        计划结束年份 = Time.Year(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+        计划结束月份 = Time.Month(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+
+        两月 = 两月一测(计划结束月份,当前月份)
+        六月 = 六月一测(计划结束月份,当前月份)
+        三月 = 三月一测(计划结束月份,当前月份)
+        其余 = 其余时段(计划结束月份,当前月份,其余时段匹配,完成状态) 
+        If 计划结束年份 =  当前年份
+            If 两月[0] = 两月[1] And 完成状态 = "" And (线路重要度 = "关键" Or 线路重要度 = "重要")  And 两月[0] = 当前月份
+                Excel.WriteCell(objExcelyuanbiao,"8、非直埋式中间接头红外检测 ","Z"&i+4,当前月份&"月份需要提醒",false)
+            ElseIf 其余 = "其余时段成立" 
+                Excel.WriteCell(objExcelyuanbiao,"8、非直埋式中间接头红外检测 ","Z"&i+4,计划结束月份&"月份需要提醒",false)
+            ElseIf 完成状态 = "" And (线路重要度 = "一般" Or 线路重要度 = "关注") 
+                If 电压等级 = "110kV" And 六月[0] = 当前月份
+                    Excel.WriteCell(objExcelyuanbiao,"8、非直埋式中间接头红外检测 ","Z"&i+4,六月[0]&"月份需要提醒",false)
+                ElseIf 电压等级 = "220kV" And 三月[0] = 当前月份
+                    Excel.WriteCell(objExcelyuanbiao,"8、非直埋式中间接头红外检测 ","Z"&i+4,三月[0]&"月份需要提醒",false)
+                End If
+            End If
+        End If
+    Next
+End Function
+
+Function 架空线路接地电阻测试(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    //读取线路名和结束时间 并筛选出月份，最后转成数组
+    原表 = Excel.ReadRange(objExcelyuanbiao, "2、架空线路接地电阻测试", "F4:K250", false)
+    原表 = Datatable.BuildDataTable(原表, ["线路名称", "线路段", "工作计划", "杆塔数量（基）","计划开始日期", "计划结束日期"])
+    //创建新的数据表了
+    原表 = Datatable.SelectDataTableColumns(原表, ["线路名称", "计划开始日期", "计划结束日期","工作计划"])
+    arrayShape = Datatable.GetDataTableShape(原表)
+    原表数组 = Datatable.GetDataTableByArray(原表, false)
+
+    For i = 0 To UBound(原表数组) step 1
+        线路重要度 = 原表数组[i][3]
+        其余时段匹配 = Regex.Test(线路重要度,"其余时段")
+        完成状态 = Excel.ReadCell(objExcelyuanbiao,"2、架空线路接地电阻测试","AD"&i+4,true)
+        计划结束年份 = Time.Year(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+        计划结束月份 = Time.Month(Time.CDate(原表数组[i][2], "yyyy.mm.dd"))
+
+        If 计划结束年份 =  当前年份
+            If 计划结束月份 = 当前月份 And 完成状态 <> "已完成"
+                Excel.WriteCell(objExcelyuanbiao,"2、架空线路接地电阻测试","AF"&i+4,计划结束月份&"月份需要提醒",false)
+            End If
+        End If
+    Next
+End Function
+
+Function 重要跨越区段测温(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    row = Excel.GetRowsCount(objExcelyuanbiao,"重要跨越区段测温")
+    // TracePrint(row)
+    For i = 4 To row step 1
+        If 当前月份 =  7
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","U"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","V"&i,true)
+            If 超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "" 
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  8
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","U"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","W"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","X"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") And 七月 <> "已取消"
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  9
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","U"&i,true)
+            八月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","W"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","Y"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","Z"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") and (七月 <> "已取消" or 八月 <> "已取消")
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  10
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","U"&i,true)
+            八月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","W"&i,true)
+            九月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","Y"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AA"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AB"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") and (七月 <> "已取消" or 八月 <> "已取消" or 九月 <> "已取消")
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  11
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","U"&i,true)
+            八月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","W"&i,true)
+            九月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","Y"&i,true)
+            十月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AA"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AC"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AD"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") and (七月 <> "已取消" or 八月 <> "已取消" or 九月 <> "已取消" or 十月 <> "已取消")
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  12
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","U"&i,true)
+            八月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","W"&i,true)
+            九月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","Y"&i,true)
+            十月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AA"&i,true)
+            十一月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AC"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AE"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段测温","AF"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") and (七月 <> "已取消" or 八月 <> "已取消" or 九月 <> "已取消" or 十月 <> "已取消" or 十一月 <> "已取消")
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段测温","AG"&i,"不需要提醒",false)
+            End If
+        End If
+
+
+    Next
+End Function
+
+Function 电缆线路交叉互联预试(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    原表 = Excel.ReadRange(objExcelyuanbiao, "3、电缆线路交叉互联预试", "D4:G68", false)
+    原表 = Datatable.BuildDataTable(原表, ["线路名称", "线路重要度", "工作内容", "预试到期时间"])
+    // //创建新的数据表
+    原表 = Datatable.SelectDataTableColumns(原表, ["线路名称", "预试到期时间","线路重要度"])
+    原表数组 = Datatable.GetDataTableByArray(原表, false)
+    For i = 0 To UBound(原表数组) step 1
+        线路重要度 = 原表数组[i][2]
+        其余时段匹配 = Regex.Test(线路重要度,"其余时段")
+        完成状态 = Excel.ReadCell(objExcelyuanbiao,"3、电缆线路交叉互联预试","AI"&i+4,true)
+        计划结束年份 = Time.Year(Time.CDate(原表数组[i][1], "yyyy.mm.dd"))
+        计划结束月份 = Time.Month(Time.CDate(原表数组[i][1], "yyyy.mm.dd"))
+        If 计划结束年份 =  当前年份
+            //临期未完成
+            If 完成状态 <> "已完成" And 计划结束月份 = 当前月份
+                Excel.WriteCell(objExcelyuanbiao,"3、电缆线路交叉互联预试","AK"&i+4,计划结束月份&"月份需要提醒",false)
+            //已完成，回填空值
+            ElseIf 完成状态 = "已完成"
+                Excel.WriteCell(objExcelyuanbiao,"3、电缆线路交叉互联预试","AK"&i+4,"",false)
+            //超期提醒
+            // ElseIf 完成状态 <> "已完成" And 计划结束月份 <= 当前月份
+                // Excel.WriteCell(objExcelyuanbiao,"3、电缆线路交叉互联预试","AK"&i+4,"已超期",false)
+            End If  
+        End If
+    Next
+End Function
+
+Function 终端场避雷器试验(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    原表 = Excel.ReadRange(objExcelyuanbiao, "4、终端场避雷器试验", "D4:H97", false)
+    原表 = Datatable.BuildDataTable(原表, ["线路名称", "线路重要度", "设备设施名称","工作内容", "预试到期时间"])
+    // //创建新的数据表
+    原表 = Datatable.SelectDataTableColumns(原表, ["线路名称", "预试到期时间","线路重要度"])
+    原表数组 = Datatable.GetDataTableByArray(原表, false)
+    For i = 0 To UBound(原表数组) step 1
+        线路重要度 = 原表数组[i][2]
+        其余时段匹配 = Regex.Test(线路重要度,"其余时段")
+        完成状态 = Excel.ReadCell(objExcelyuanbiao,"4、终端场避雷器试验","Z"&i+4,true)
+        计划结束年份 = Time.Year(Time.CDate(原表数组[i][1], "yyyy.mm.dd"))
+        计划结束月份 = Time.Month(Time.CDate(原表数组[i][1], "yyyy.mm.dd"))
+        If 计划结束年份 =  当前年份
+            //临期未完成
+            If 完成状态 <> "已完成" And 计划结束月份 = 当前月份
+                Excel.WriteCell(objExcelyuanbiao,"4、终端场避雷器试验","AB"&i+4,计划结束月份&"月份需要提醒",false)
+            //已完成，回填空值
+            ElseIf 完成状态 = "已完成"
+                Excel.WriteCell(objExcelyuanbiao,"4、终端场避雷器试验","AB"&i+4,"",false)
+            //超期提醒
+            // ElseIf 完成状态 <> "已完成" And 计划结束月份 <= 当前月份
+                // Excel.WriteCell(objExcelyuanbiao,"4、终端场避雷器试验","AB"&i+4,"已超期",false)
+            End If  
+        End If
+    Next
+End Function
+
+Function 重要跨越区段巡视(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+    row = Excel.GetRowsCount(objExcelyuanbiao,"重要跨越区段巡视")
+    // TracePrint(row)
+    For i = 4 To row step 1
+        If 当前月份 =  7
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","U"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","V"&i,true)
+            If 超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "" 
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  8
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","U"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","W"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","X"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") And 七月 <> "已取消"
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  9
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","U"&i,true)
+            八月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","W"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","Y"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","Z"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") and (七月 <> "已取消" or 八月 <> "已取消")
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  10
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","U"&i,true)
+            八月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","W"&i,true)
+            九月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","Y"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AA"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AB"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") and (七月 <> "已取消" or 八月 <> "已取消" or 九月 <> "已取消")
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  11
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","U"&i,true)
+            八月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","W"&i,true)
+            九月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","Y"&i,true)
+            十月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AA"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AC"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AD"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") and (七月 <> "已取消" or 八月 <> "已取消" or 九月 <> "已取消" or 十月 <> "已取消")
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,"不需要提醒",false)
+            End If
+        ElseIf 当前月份 =  12
+            七月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","U"&i,true)
+            八月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","W"&i,true)
+            九月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","Y"&i,true)
+            十月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AA"&i,true)
+            十一月 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AC"&i,true)
+            完成时间 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AE"&i,true)
+            超期红绿灯 = Excel.ReadCell(objExcelyuanbiao,"重要跨越区段巡视","AF"&i,true)
+            If (超期红绿灯 = "黄灯" or  超期红绿灯 = "红灯" or 超期红绿灯 = "") and (七月 <> "已取消" or 八月 <> "已取消" or 九月 <> "已取消" or 十月 <> "已取消" or 十一月 <> "已取消")
+                Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,当前月份&"月份需要提醒",false)
+            Else 
+                // Excel.WriteCell(objExcelyuanbiao,"重要跨越区段巡视","AG"&i,"不需要提醒",false)
+            End If
+        End If
+
+
+    Next
+End Function
+
+重要交跨 = 重要跨越区段测温(objExcelyuanbiao,当前日期,当前年份,当前月份)
+TracePrint("已回填1")
+重要交跨巡视 = 重要跨越区段巡视(objExcelyuanbiao,当前日期,当前年份,当前月份)
+TracePrint("已回填1.1")
+
+//一年一测，暂不需要
+// 第二架空线路接地电阻测试 = 架空线路接地电阻测试(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+// TracePrint("已回填2")
+
+第三电缆线路交叉互联预试 = 电缆线路交叉互联预试(objExcelyuanbiao,当前日期,当前年份,当前月份)
+TracePrint("已回填3")
+第四终端场避雷器试验 = 终端场避雷器试验(objExcelyuanbiao,当前日期,当前年份,当前月份) 
+TracePrint("已回填4")
+第五电缆护套环流检测 = 电缆护套环流检测(objExcelyuanbiao,当前日期,当前年份,当前月份)
+TracePrint("已回填5")
+第六电缆终端红外检测 = 电缆终端红外检测(objExcelyuanbiao,当前日期,当前年份,当前月份)
+TracePrint("已回填6")
+第七避雷器红外检测 = 避雷器红外检测(objExcelyuanbiao,当前日期,当前年份,当前月份)
+TracePrint("已回填7")
+第八非直埋式中间接头红外检测 = 非直埋式中间接头红外检测(objExcelyuanbiao,当前日期,当前年份,当前月份)
+TracePrint("已回填8")
+
+Excel.Save(objExcelyuanbiao)
+
+
+Return back
