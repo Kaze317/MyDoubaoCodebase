@@ -24,6 +24,62 @@ def process_date(value):
         return pd.NaT  
 
 
+def normalize_columns(df):
+    """
+    把 DataFrame 列名做一次统一清洗：
+    - 去掉首尾空白
+    - 把非断行空格(NBSP)转成普通空格
+    - 把连续空白压缩成单个空格
+    目的：避免Excel列名带空格/换行导致 KeyError。
+    """
+    import re as _re
+    cleaned = []
+    for c in df.columns:
+        if isinstance(c, str):
+            c2 = c.replace("\xa0", " ")
+            c2 = c2.strip()
+            c2 = _re.sub(r"\s+", " ", c2)
+            cleaned.append(c2)
+        else:
+            cleaned.append(c)
+    df.columns = cleaned
+    return df
+
+
+def find_column(df, target_name):
+    """
+    查找列名：
+    1) 精确匹配（strip 后）
+    2) 模糊匹配：列名包含 target_name
+    返回列名字符串；找不到返回 None
+    """
+    if target_name in df.columns:
+        return target_name
+    candidates = [c for c in df.columns if isinstance(c, str) and target_name in c]
+    if len(candidates) == 1:
+        return candidates[0]
+    return None
+
+
+def ensure_column(df, col_name, default_value=""):
+    if col_name not in df.columns:
+        df[col_name] = default_value
+    return col_name
+
+
+def ensure_date_columns(df):
+    """确保存在“实际开始日期”“实际结束日期”，不存在则自动新建。"""
+    start_col = find_column(df, "实际开始日期") or find_column(df, "实际开始时间")
+    end_col = find_column(df, "实际结束日期") or find_column(df, "实际结束时间")
+
+    if start_col is None:
+        start_col = ensure_column(df, "实际开始日期", "")
+    if end_col is None:
+        end_col = ensure_column(df, "实际结束日期", "")
+
+    return start_col, end_col
+
+
 def get_range_start_end_months(line_importance, voltage, planned_start_month):
     """
     由“线路重要度 + 电压等级 + 计划开始日期(月份)”推导允许完成的时间范围(按月)。
@@ -55,26 +111,13 @@ def get_range_start_end_months(line_importance, voltage, planned_start_month):
 
 def should_complete_by_importance_range(line_importance, voltage, planned_start_date, actual_start_time, actual_end_time):
     """
-    规则执行顺序：
-    1) 先看实际开始日期落在哪个范围内
-    2) 再看实际结束日期的月份是否不超过范围结束月份
+    当前按“是否匹配到记录”回填：
+    - 只要实际开始/结束时间有效，就允许回填
+    - 不再按重要度/季度/半年窗口限制
     """
-    if pd.isna(planned_start_date) or pd.isna(actual_start_time) or pd.isna(actual_end_time):
+    if pd.isna(actual_start_time) or pd.isna(actual_end_time):
         return False
-
-    planned_year = planned_start_date.year
-    if actual_start_time.year != planned_year or actual_end_time.year != planned_year:
-        return False
-
-    start_m, end_m = get_range_start_end_months(
-        line_importance=line_importance,
-        voltage=voltage,
-        planned_start_month=planned_start_date.month
-    )
-    actual_start_m = actual_start_time.month
-    actual_end_m = actual_end_time.month
-
-    return (start_m <= actual_start_m <= end_m) and (actual_end_m <= end_m)
+    return True
 
 
 
@@ -153,29 +196,51 @@ def gantahao(place_and_text):
 def Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth,Source_data):
     
     towerID_merge = gantahao(place_and_text)  
-    progress = Source_data.iloc[line]["完成情况"]
-    if progress != "已完成":
-        
-        Source_data.iloc[line, Source_data.columns.get_loc("计划编号")] = ID
-        Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")] = place_and_text
-        Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")] = start_time
-        Source_data.iloc[line, Source_data.columns.get_loc("实际结束日期")] = end_time
-        Source_data.iloc[line, Source_data.columns.get_loc("完成月份")] = f"{setMonth}月份已完成"
-        Source_data.iloc[line, Source_data.columns.get_loc("完成情况")] = "已完成"
-    elif progress == "已完成":
-        Source_data.iloc[line, Source_data.columns.get_loc("计划编号")] = str(Source_data.iloc[line, Source_data.columns.get_loc("计划编号")]) + "\n" + ID
-        Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")] = str(Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")]) + "\n"+place_and_text
-        Source_data.iloc[line, Source_data.columns.get_loc("实际结束日期")] = end_time
-        Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")] = str(Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")]) + "\n" + start_time
+    normalize_columns(Source_data)
+
+    finish_col = find_column(Source_data, "完成情况")
+    work_content_col = find_column(Source_data, "工作地点和内容")
+    plan_id_col = find_column(Source_data, "计划编号")
+    start_col = find_column(Source_data, "实际开始日期") or find_column(Source_data, "实际开始时间")
+    end_col = find_column(Source_data, "实际结束日期") or find_column(Source_data, "实际结束时间")
+    finish_month_col = find_column(Source_data, "完成月份")
+
+    # 只要求“回填必要列”存在即可执行
+    if any(c is None for c in [work_content_col, plan_id_col, start_col, end_col]):
+        print("[warn] Data_Backfill 缺少回填必要列(工作地点和内容/计划编号/实际开始/实际结束)，跳过回填。")
+        return
+
+    # 回填实际开始/结束日期（匹配到就写）
+    Source_data.iloc[line, Source_data.columns.get_loc(plan_id_col)] = ID
+    Source_data.iloc[line, Source_data.columns.get_loc(work_content_col)] = place_and_text
+    Source_data.iloc[line, Source_data.columns.get_loc(start_col)] = start_time
+    Source_data.iloc[line, Source_data.columns.get_loc(end_col)] = end_time
+
+    # 有“完成月份/完成情况”就写，没有就跳过
+    if finish_month_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(finish_month_col)] = f"{setMonth}月份已完成"
+    if finish_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(finish_col)] = "已完成"
 
 
 def remind(Source_data,line,setMonth,Planned_month,year_name): 
-    performance = Source_data.at[line,"完成情况"]
+    normalize_columns(Source_data)
+    finish_col = find_column(Source_data, "完成情况")
+    if finish_col is None:
+        # 模板无“完成情况”时，静默跳过提醒，不影响回填
+        return
+
+    performance = Source_data.at[line, finish_col]
     
     if performance == "已完成":
         return
 
-    planned_start_date = process_date(Source_data.at[line, "计划开始日期"])
+    planned_start_col = find_column(Source_data, "计划开始日期")
+    if planned_start_col is None:
+        print("[warn] 找不到列 '计划开始日期'，已跳过提醒。")
+        return
+
+    planned_start_date = process_date(Source_data.at[line, planned_start_col])
     if pd.isna(planned_start_date):
         return
 
@@ -183,16 +248,23 @@ def remind(Source_data,line,setMonth,Planned_month,year_name):
     if planned_start_date.year != 2025:
         return
 
-    line_importance = Source_data.at[line, "线路重要度"]
-    voltage = Source_data.at[line, "电压等级"] if "电压等级" in Source_data.columns else ""
+    line_importance_col = find_column(Source_data, "线路重要度")
+    voltage_col = find_column(Source_data, "电压等级")
+    line_importance = Source_data.at[line, line_importance_col] if line_importance_col else ""
+    voltage = Source_data.at[line, voltage_col] if voltage_col else ""
     _, due_end_month = get_range_start_end_months(
         line_importance=line_importance,
         voltage=voltage,
         planned_start_month=planned_start_date.month
     )
 
+    remind_col = find_column(Source_data, "计划临期提醒")
+    if remind_col is None:
+        print("[warn] 找不到列 '计划临期提醒'，已跳过提醒写入。")
+        return
+
     if setMonth == due_end_month:
-        Source_data.iloc[line, Source_data.columns.get_loc("计划临期提醒")] = f"{setMonth}月需要提醒"
+        Source_data.iloc[line, Source_data.columns.get_loc(remind_col)] = f"{setMonth}月需要提醒"
 
 
 def main_1(setMonth):
@@ -216,6 +288,7 @@ def main_1(setMonth):
     
     
     Source_data = pd.read_excel(Source_path, sheet_name="1、架空线路红外检测", skiprows=[0,1])
+    normalize_columns(Source_data)
     Source_data['计划开始日期'] = Source_data['计划开始日期'].apply(process_date)
     Source_data['计划结束日期'] = Source_data['计划结束日期'].apply(process_date)
     read_data = pd.read_excel(read_path, sheet_name="计划查询列表")

@@ -5,7 +5,7 @@ import re
 import warnings
 from datetime import datetime
 import pandas as pd
-from Plan1 import remind
+from Plan1 import remind, normalize_columns, find_column, ensure_date_columns
 warnings.filterwarnings('ignore')
 pd.set_option('display.width', 1000)  
 pd.set_option('display.max_columns', None)
@@ -110,17 +110,25 @@ def the_rest(read_data, Source_data, line, Planned_month, setMonth,line_importan
 
 
 def Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth,Source_data):
-    
-    progress = Source_data.iloc[line]["完成情况"]
-    if progress != "已完成":
-        
-        
-        Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")] = place_and_text
-        Source_data.iloc[line, Source_data.columns.get_loc("计划编号")] = ID
-        Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")] = start_time
-        Source_data.iloc[line, Source_data.columns.get_loc("实际结束日期")] = end_time
-        Source_data.iloc[line, Source_data.columns.get_loc("完成月份")] = f"{setMonth}月份已完成"
-        Source_data.iloc[line, Source_data.columns.get_loc("完成情况")] = "已完成"
+    normalize_columns(Source_data)
+    start_col, end_col = ensure_date_columns(Source_data)
+
+    work_content_col = find_column(Source_data, "工作地点和内容")
+    plan_id_col = find_column(Source_data, "计划编号")
+    finish_col = find_column(Source_data, "完成情况")
+    finish_month_col = find_column(Source_data, "完成月份")
+
+    Source_data.iloc[line, Source_data.columns.get_loc(start_col)] = start_time
+    Source_data.iloc[line, Source_data.columns.get_loc(end_col)] = end_time
+
+    if work_content_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(work_content_col)] = place_and_text
+    if plan_id_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(plan_id_col)] = ID
+    if finish_month_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(finish_month_col)] = f"{setMonth}月份已完成"
+    if finish_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(finish_col)] = "已完成"
     
     
     
@@ -219,18 +227,20 @@ def main_8(setMonth):
     print(f"8、非直埋式中间接头红外检测已搜到关键字数据共有：{len(read_data)}")
 
     for line in range(len(Source_data)):
-        line_importance = Source_data.at[line, "线路重要度"]  
-        
-        
+        line_importance = Source_data.at[line, "线路重要度"]
+
         Planned_end_time = Source_data.at[line, '计划结束日期']
-        Planned_month = process_date(Planned_end_time)  
-        Planned_month = Planned_month.month  
-        if re.search("其余时段", line_importance):
-            txt1 = the_rest(read_data, Source_data, line, Planned_month, setMonth, line_importance)
-        elif re.search("关注|一般", line_importance):  
+        Planned_month = process_date(Planned_end_time)
+        Planned_month = Planned_month.month
+        line_importance_str = "" if pd.isna(line_importance) else str(line_importance)
+        if re.search("其余时段", line_importance_str):
+            txt1 = the_rest(read_data, Source_data, line, Planned_month, setMonth, line_importance_str)
+        elif re.search("关注|一般", line_importance_str):
             txt2 = guanzhu_and_yiban(read_data, Source_data, line, Planned_month, setMonth)
-        elif re.search("关键|重要", line_importance):  
+        elif re.search("关键|重要", line_importance_str):
             txt3 = guanjian_and_zhongyao(read_data, Source_data, line, Planned_month, setMonth)
+        else:
+            txtd = guanzhu_and_yiban(read_data, Source_data, line, Planned_month, setMonth)
         remind(Source_data, line, setMonth, Planned_month,year_name="计划结束日期")  
     Source_data['计划开始日期'] = pd.to_datetime(Source_data['计划开始日期']).dt.strftime('%Y-%m-%d')
     Source_data['计划结束日期'] = pd.to_datetime(Source_data['计划结束日期']).dt.strftime('%Y-%m-%d')

@@ -5,7 +5,7 @@ import re
 import warnings
 from datetime import datetime
 import pandas as pd
-from Plan1 import remind, should_complete_by_importance_range
+from Plan1 import remind, should_complete_by_importance_range, normalize_columns, find_column, ensure_date_columns
 warnings.filterwarnings('ignore')
 pd.set_option('display.width', 1000)  
 pd.set_option('display.max_columns', None)
@@ -55,23 +55,26 @@ def the_rest(read_data, Source_data, line, Planned_month, setMonth,Planned_year)
     return "已回填(3、电缆线路交叉互联预试)"
 
 def Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth,Source_data):
-    
-    progress = Source_data.iloc[line]["完成情况"]
-    if progress != "已完成":
-        
-        
-        Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")] = place_and_text
-        Source_data.iloc[line, Source_data.columns.get_loc("计划编号")] = ID
-        Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")] = start_time
-        Source_data.iloc[line, Source_data.columns.get_loc("实际结束日期")] = end_time
-        Source_data.iloc[
-            line, Source_data.columns.get_loc("完成月份")] = f"{setMonth}月份已完成"
-        Source_data.iloc[line, Source_data.columns.get_loc("完成情况")] = "已完成"
-    elif progress == "已完成":
-        Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")] = str(Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")]) + "\n"+place_and_text
-        Source_data.iloc[line, Source_data.columns.get_loc("计划编号")] = str(Source_data.iloc[line, Source_data.columns.get_loc("计划编号")]) + "\n" + ID
-        Source_data.iloc[line, Source_data.columns.get_loc("实际结束日期")] = end_time
-        Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")] = str(Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")]) + "\n" + start_time
+    normalize_columns(Source_data)
+    start_col, end_col = ensure_date_columns(Source_data)
+
+    work_content_col = find_column(Source_data, "工作地点和内容")
+    plan_id_col = find_column(Source_data, "计划编号")
+    finish_col = find_column(Source_data, "完成情况")
+    finish_month_col = find_column(Source_data, "完成月份")
+
+    # 日期回填是硬目标，匹配到就写
+    Source_data.iloc[line, Source_data.columns.get_loc(start_col)] = start_time
+    Source_data.iloc[line, Source_data.columns.get_loc(end_col)] = end_time
+
+    if work_content_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(work_content_col)] = place_and_text
+    if plan_id_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(plan_id_col)] = ID
+    if finish_month_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(finish_month_col)] = f"{setMonth}月份已完成"
+    if finish_col is not None:
+        Source_data.iloc[line, Source_data.columns.get_loc(finish_col)] = "已完成"
 
 def main_3(setMonth):
     

@@ -4,7 +4,7 @@ import warnings
 from datetime import datetime
 import pandas as pd
 import ast
-from Plan1 import remind, should_complete_by_importance_range
+from Plan1 import remind, should_complete_by_importance_range, normalize_columns, find_column, ensure_date_columns
 warnings.filterwarnings('ignore')
 pd.set_option('display.width', 1000)  
 pd.set_option('display.max_columns', None)
@@ -25,6 +25,26 @@ def process_date(value):
     else:
         return pd.NaT  
 
+
+def pick_plan_date_column(df, kind="start"):
+    cols = [c for c in df.columns if isinstance(c, str)]
+    if kind == "start":
+        targets = ["计划开始日期", "计划开始时间"]
+        fuzzy_key = "计划开始"
+    else:
+        targets = ["计划结束日期", "计划结束时间"]
+        fuzzy_key = "计划结束"
+
+    for t in targets:
+        c = find_column(df, t)
+        if c is not None:
+            return c
+    for c in cols:
+        if fuzzy_key in c and ("日期" in c or "时间" in c):
+            return c
+    return None
+
+
 def gantahao(place_and_text):
     
     towerID = re.findall(r"#(\d{2,3})-#(\d{2,3})", place_and_text)
@@ -37,34 +57,50 @@ def gantahao(place_and_text):
     return towerID_merge
 
 
-def Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth,Source_data,new_zone,new_data):
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+def Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth, Source_data, new_zone, new_data):
+    normalize_columns(Source_data)
+
+    work_content_col = find_column(Source_data, "工作地点和内容") or find_column(Source_data, "备注")
+    plan_id_col = find_column(Source_data, "计划编号")
+    start_col, end_col = ensure_date_columns(Source_data)
+    pending_zone_col = find_column(Source_data, "待完成线路段") or find_column(Source_data, "线路段")
+    done_zone_col = find_column(Source_data, "已完成线路段")
+    finish_col = find_column(Source_data, "完成情况")
+    finish_month_col = find_column(Source_data, "完成月份")
+
+    if any(c is None for c in [start_col, end_col, pending_zone_col]):
+        print(f"[warn] Plan2 Data_Backfill 找不到关键列，跳过回填。当前列名: {list(Source_data.columns)}")
+        return
+
     if len(new_data) != 0:
-        Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")] = str(
-            Source_data.iloc[line, Source_data.columns.get_loc("工作地点和内容")]) + "\n" + place_and_text
-        Source_data.iloc[line, Source_data.columns.get_loc("计划编号")] = str(
-            Source_data.iloc[line, Source_data.columns.get_loc("计划编号")]) + "\n" + ID
-        Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")] = str(
-            Source_data.iloc[line, Source_data.columns.get_loc("实际开始日期")]) + "\n" + start_time
-        Source_data.iloc[line, Source_data.columns.get_loc("待完成线路段")] = str(new_zone)
-        Source_data.iloc[line, Source_data.columns.get_loc("已完成线路段")] = str(
-            Source_data.iloc[line, Source_data.columns.get_loc("已完成线路段")]) + "\n" + str(new_data)
-        
-        Source_data.iloc[line, Source_data.columns.get_loc("完成情况")] = '已完成'
-        Source_data.iloc[line, Source_data.columns.get_loc("完成月份")] = f"{setMonth}月份已完成"
-        Source_data.iloc[line, Source_data.columns.get_loc("实际结束日期")] = end_time
+        if work_content_col is not None:
+            Source_data.iloc[line, Source_data.columns.get_loc(work_content_col)] = str(
+                Source_data.iloc[line, Source_data.columns.get_loc(work_content_col)]
+            ) + "\n" + place_and_text
+
+        if plan_id_col is not None:
+            Source_data.iloc[line, Source_data.columns.get_loc(plan_id_col)] = str(
+                Source_data.iloc[line, Source_data.columns.get_loc(plan_id_col)]
+            ) + "\n" + str(ID)
+
+        Source_data.iloc[line, Source_data.columns.get_loc(start_col)] = str(
+            Source_data.iloc[line, Source_data.columns.get_loc(start_col)]
+        ) + "\n" + str(start_time)
+
+        Source_data.iloc[line, Source_data.columns.get_loc(pending_zone_col)] = str(new_zone)
+
+        if done_zone_col is not None:
+            Source_data.iloc[line, Source_data.columns.get_loc(done_zone_col)] = str(
+                Source_data.iloc[line, Source_data.columns.get_loc(done_zone_col)]
+            ) + "\n" + str(new_data)
+
+        if finish_col is not None:
+            Source_data.iloc[line, Source_data.columns.get_loc(finish_col)] = '已完成'
+        if finish_month_col is not None:
+            Source_data.iloc[line, Source_data.columns.get_loc(finish_month_col)] = f"{setMonth}月份已完成"
+
+        Source_data.iloc[line, Source_data.columns.get_loc(end_col)] = end_time
+
 
 def complement(Source_data): 
     def extract_segments(text):  
@@ -96,16 +132,6 @@ def complement(Source_data):
     Source_data['补全字段#号数量'] = Source_data['补全字段'].apply(len)
     new = Source_data[['线路段', '线路段#号数量', '补全字段', '提取结果', '补全字段#号数量']]
     new.to_excel('data.xlsx', index=False)
-    
-
-    
-    
-    
-    
-    
-    
-    
-    
 
 
 def item_ziduan(all_list,data):
@@ -144,10 +170,6 @@ def complete_numbers(numbers):
 
 
 def main_2(setMonth):
-    
-    
-    
-    
     path = {
         'one_path': './*计划查询列表*.xlsx',
         'two_path': './*预试检测计划*.xlsx',
@@ -159,49 +181,59 @@ def main_2(setMonth):
     
     read_path = paths['one_path']
     Source_path = paths['two_path']
-    
-    
+
     Source_data = pd.read_excel(Source_path, sheet_name="2、架空线路接地电阻测试", skiprows=[0])
-    
-    Source_data['计划开始日期'] = Source_data['计划开始日期'].apply(process_date)
-    Source_data['计划结束日期'] = Source_data['计划结束日期'].apply(process_date)
+    normalize_columns(Source_data)
+
+    planned_start_col = pick_plan_date_column(Source_data, kind="start")
+    planned_end_col = pick_plan_date_column(Source_data, kind="end")
+    line_importance_col = find_column(Source_data, "线路重要度")
+    voltage_col = find_column(Source_data, "电压等级")
+    line_name_col = find_column(Source_data, "线路名称")
+    pending_zone_col = find_column(Source_data, "待完成线路段") or find_column(Source_data, "线路段")
+
+    if any(c is None for c in [planned_start_col, planned_end_col, line_importance_col, voltage_col, line_name_col, pending_zone_col]):
+        raise KeyError(
+            "Plan2 找不到必要列（计划开始/结束、线路重要度、电压等级、线路名称、待完成线路段/线路段）。"
+            f" 当前列名: {list(Source_data.columns)}"
+        )
+
+    Source_data[planned_start_col] = Source_data[planned_start_col].apply(process_date)
+    Source_data[planned_end_col] = Source_data[planned_end_col].apply(process_date)
+
     read_data = pd.read_excel(read_path, sheet_name="计划查询列表")
     read_data = read_data[['计划编号', '工作地点', '工作内容', '实际开始时间', '实际结束时间']]
     read_data = read_data[(read_data['工作地点'].str.contains('接地电阻')) | (
         read_data['工作内容'].str.contains('接地电阻'))]
     print(f"2、架空线路接地电阻测试已搜到关键字数据共有：{len(read_data)}")
 
-    
-    
     for line in range(len(Source_data)):
-        line_importance = Source_data.at[line, "线路重要度"]  
-        voltage = Source_data.at[line, "电压等级"]
-        planned_start_date = Source_data.at[line, "计划开始日期"]
-        zone = Source_data.at[line, "待完成线路段"]  
-        list_zone = ast.literal_eval(zone)
-        job_content = ""  
-        Plan_number = ""  
-        in_start_time = ""  
-        in_end_time = ""  
-        Planned_end_time = Source_data.at[line, '计划结束日期']
-        Planned_end_time = process_date(Planned_end_time)  
-        Planned_month = Planned_end_time.month  
-        
-        line_name = Source_data.at[line, "线路名称"]  
-        sRet = re.sub(r"乙", r".*?乙", line_name)
+        line_importance = Source_data.at[line, line_importance_col]
+        voltage = Source_data.at[line, voltage_col]
+        planned_start_date = Source_data.at[line, planned_start_col]
+
+        zone = Source_data.at[line, pending_zone_col]
+        try:
+            list_zone = ast.literal_eval(zone) if isinstance(zone, str) else []
+        except Exception:
+            list_zone = []
+
+        Planned_end_time = process_date(Source_data.at[line, planned_end_col])
+        if pd.isna(Planned_end_time):
+            continue
+        Planned_month = Planned_end_time.month
+
+        line_name = Source_data.at[line, line_name_col]
+        sRet = re.sub(r"乙", r".*?乙", str(line_name))
         sRet = re.sub(r"甲", r"甲.*?", sRet)
+
         for i in range(len(read_data)):
-            
-            place_and_text = read_data.iloc[i]["工作地点"] + read_data.iloc[i]["工作内容"]  
-            
-            
-            
-            
-            new_data =  split_text(place_and_text)
+            place_and_text = str(read_data.iloc[i]["工作地点"]) + str(read_data.iloc[i]["工作内容"])
+            new_data = split_text(place_and_text)
             for ij in new_data:
-                zone_name = Source_data.at[line, "待完成线路段"]  
-                if re.search(sRet, ij) and "[]" not in zone_name:  
-                    ID = read_data.iloc[i]["计划编号"]  
+                zone_name = str(Source_data.at[line, pending_zone_col])
+                if re.search(sRet, ij) and "[]" not in zone_name:
+                    ID = read_data.iloc[i]["计划编号"]
                     actual_start_time = pd.to_datetime(read_data.iloc[i]["实际开始时间"])
                     actual_end_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
                     if not should_complete_by_importance_range(
@@ -213,25 +245,20 @@ def main_2(setMonth):
                     ):
                         continue
 
-                    start_time = actual_start_time
-                    end_time = actual_end_time
-                    end_time_year = end_time
-                    
-                    
                     numbers = extract_numbers_with_hash(ij)
-                    
                     check_list = complete_numbers(numbers)
-                    new_zone, new_data = item_ziduan(all_list=list_zone, data=check_list)
-                    Data_Backfill(line, line_name, ij, ID, start_time, end_time, setMonth, Source_data, new_zone,
-                                  new_data)
-        remind(Source_data, line, setMonth, Planned_month,year_name="计划结束日期")  
-    
-    Source_data['计划开始日期'] = pd.to_datetime(Source_data['计划开始日期']).dt.strftime('%Y-%m-%d')
-    Source_data['计划结束日期'] = pd.to_datetime(Source_data['计划结束日期']).dt.strftime('%Y-%m-%d')
-    
+                    new_zone, done_data = item_ziduan(all_list=list_zone, data=check_list)
+                    Data_Backfill(line, line_name, ij, ID, actual_start_time, actual_end_time, setMonth, Source_data, new_zone, done_data)
+
+        remind(Source_data, line, setMonth, Planned_month, year_name="计划结束日期")
+
+    Source_data[planned_start_col] = pd.to_datetime(Source_data[planned_start_col]).dt.strftime('%Y-%m-%d')
+    Source_data[planned_end_col] = pd.to_datetime(Source_data[planned_end_col]).dt.strftime('%Y-%m-%d')
+
     with pd.ExcelWriter(Source_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
         Source_data.to_excel(writer, sheet_name="2、架空线路接地电阻测试", startrow=1, startcol=0, index=False)
     return Source_data
+
 
 def data_one():
     
@@ -242,15 +269,8 @@ def data_one():
     
     print(result)
 
+
 if __name__ == '__main__':
     now_time = 4
     main_2(now_time)
-    
-    
-    
-    
-    
-    
     pass
-
-

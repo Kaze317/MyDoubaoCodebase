@@ -1,4 +1,15 @@
+import os
+import sys
 import pandas as pd
+
+# 运行目录锁定策略：
+# - 脚本运行：锁定到 main.py 所在目录
+# - EXE运行(PyInstaller)：锁定到 exe 所在目录
+if getattr(sys, "frozen", False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+os.chdir(BASE_DIR)
 
 from Plan1 import main_1
 from Plan2 import main_2
@@ -13,11 +24,40 @@ from new_Plan1_cw_xs import new_main_CW_XS
 from datetime import datetime
 
 
-def Month_Stat_Data(data, month, columns_extract):  
-    now_data = data[data['完成月份'] == f'{month}月份已完成']
-    stat = len(now_data)
-    new_data = data[data['计划临期提醒'] == f'{month}月需要提醒']
-    cont_data = new_data[columns_extract]
+def _find_col(df, *candidates):
+    cols = [str(c).strip() for c in df.columns]
+
+    # 精确匹配
+    for target in candidates:
+        if target in cols:
+            return target
+
+    # 模糊匹配（兼容括号/全半角差异等）
+    for target in candidates:
+        for c in cols:
+            if target in c:
+                return c
+    return None
+
+
+def Month_Stat_Data(data, month, columns_extract):
+    finish_month_col = _find_col(data, '完成月份')
+    remind_col = _find_col(data, '计划临期提醒')
+
+    if finish_month_col is None:
+        # 模板没有“完成月份”时，按 0 处理，避免中断全流程
+        stat = 0
+    else:
+        now_data = data[data[finish_month_col] == f'{month}月份已完成']
+        stat = len(now_data)
+
+    if remind_col is None:
+        new_data = data.iloc[0:0]
+    else:
+        new_data = data[data[remind_col] == f'{month}月需要提醒']
+
+    existed_cols = [c for c in columns_extract if c in data.columns]
+    cont_data = new_data[existed_cols] if len(existed_cols) > 0 else new_data
     return cont_data, stat
 
 
@@ -34,27 +74,58 @@ def content_data(data, text):
 
 
 def amount_Plan(data, month, columns_extract, years=2025):
-    
-    data = data[columns_extract]
-    
-    data['计划结束日期'] = pd.to_datetime(data['计划结束日期'], errors='coerce')
-    
-    data_filtered = data[(data['计划结束日期'].dt.year == years) & (data['计划结束日期'].dt.month == month)]
-    
-    data_small_completed = data_filtered[data_filtered['完成情况'] == '已完成']
-    
-    
+    existed_cols = [c for c in columns_extract if c in data.columns]
+    data = data[existed_cols].copy() if len(existed_cols) > 0 else data.copy()
+
+    end_date_col = _find_col(data, '计划结束日期', '计划结束时间')
+    finish_status_col = _find_col(data, '完成情况', '完成状态')
+
+    if end_date_col is None:
+        return 0, 0
+
+    data[end_date_col] = pd.to_datetime(data[end_date_col], errors='coerce')
+    data_filtered = data[(data[end_date_col].dt.year == years) & (data[end_date_col].dt.month == month)]
+
     Planned_total = len(data_filtered)
-    
-    
-    data_filtered_completed = data[data['完成情况'] == '已完成']
-    Planned_completion = len(data_filtered_completed)
-    return Planned_total, Planned_completion  
+
+    if finish_status_col is None:
+        Planned_completion = 0
+    else:
+        data_filtered_completed = data[data[finish_status_col] == '已完成']
+        Planned_completion = len(data_filtered_completed)
+
+    return Planned_total, Planned_completion
+
+
+def print_backfill_summary(name, data, month):
+    finish_col = _find_col(data, '完成情况', '完成状态')
+    finish_month_col = _find_col(data, '完成月份')
+    start_col = _find_col(data, '实际开始日期', '实际开始时间')
+    end_col = _find_col(data, '实际结束日期', '实际结束时间')
+
+    if finish_col is None:
+        completed_count = 0
+    else:
+        completed_count = len(data[data[finish_col] == '已完成'])
+
+    if finish_month_col is None:
+        month_completed_count = 0
+    else:
+        month_completed_count = len(data[data[finish_month_col] == f'{month}月份已完成'])
+
+    if start_col is None or end_col is None:
+        date_backfill_count = 0
+    else:
+        start_ok = data[start_col].notna()
+        end_ok = data[end_col].notna()
+        date_backfill_count = int((start_ok & end_ok).sum())
+
+    print(f'[回填统计] {name}: 已完成={completed_count}, {month}月完成={month_completed_count}, 已回填起止日期={date_backfill_count}')
 
 
 if __name__ == '__main__':
+    print(f"运行目录已锁定为: {BASE_DIR}")
 
-    
     while True:
         now_month = input("请输入需要核查的月份：")
         if now_month.isdigit():  
@@ -68,9 +139,19 @@ if __name__ == '__main__':
     data_main3 = main_3(now_month)
     data_main4 = main_4(now_month)
     data_main5 = main_5(now_month)
-    data_main6 = main_6(now_month) 
-    data_main7 = main_7(now_month) 
+    data_main6 = main_6(now_month)
+    data_main7 = main_7(now_month)
     data_main8 = main_8(now_month)
+
+    print_backfill_summary('1、架空线路红外检测', data_main1, now_month)
+    print_backfill_summary('1、架空线路红外检测（重要交跨管控要求）', data_main1_CW, now_month)
+    print_backfill_summary('2、架空线路接地电阻测试', data_main2, now_month)
+    print_backfill_summary('3、电缆线路交叉互联预试', data_main3, now_month)
+    print_backfill_summary('4、终端场避雷器试验', data_main4, now_month)
+    print_backfill_summary('5、电缆护套环流检测', data_main5, now_month)
+    print_backfill_summary('6、电缆终端红外检测', data_main6, now_month)
+    print_backfill_summary('7、避雷器红外检测', data_main7, now_month)
+    print_backfill_summary('8、非直埋式中间接头红外检测', data_main8, now_month)
     
     data_1, number_1 = Month_Stat_Data(data=data_main1, month=now_month,
                                        columns_extract=['工作类型', '计划类型', '电压等级', '线路重要度', '线路名称',
