@@ -4,7 +4,7 @@ import warnings
 from datetime import datetime
 import pandas as pd
 import ast
-from Plan1 import remind
+from Plan1 import remind, should_complete_by_importance_range
 warnings.filterwarnings('ignore')
 pd.set_option('display.width', 1000)  
 pd.set_option('display.max_columns', None)
@@ -175,6 +175,8 @@ def main_2(setMonth):
     
     for line in range(len(Source_data)):
         line_importance = Source_data.at[line, "线路重要度"]  
+        voltage = Source_data.at[line, "电压等级"]
+        planned_start_date = Source_data.at[line, "计划开始日期"]
         zone = Source_data.at[line, "待完成线路段"]  
         list_zone = ast.literal_eval(zone)
         job_content = ""  
@@ -200,8 +202,19 @@ def main_2(setMonth):
                 zone_name = Source_data.at[line, "待完成线路段"]  
                 if re.search(sRet, ij) and "[]" not in zone_name:  
                     ID = read_data.iloc[i]["计划编号"]  
-                    start_time = read_data.iloc[i]["实际开始时间"]
-                    end_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
+                    actual_start_time = pd.to_datetime(read_data.iloc[i]["实际开始时间"])
+                    actual_end_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
+                    if not should_complete_by_importance_range(
+                        line_importance=line_importance,
+                        voltage=voltage,
+                        planned_start_date=planned_start_date,
+                        actual_start_time=actual_start_time,
+                        actual_end_time=actual_end_time,
+                    ):
+                        continue
+
+                    start_time = actual_start_time
+                    end_time = actual_end_time
                     end_time_year = end_time
                     
                     

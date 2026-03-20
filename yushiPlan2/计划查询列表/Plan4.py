@@ -5,7 +5,7 @@ import re
 import warnings
 from datetime import datetime
 import pandas as pd
-from Plan1 import remind
+from Plan1 import remind, should_complete_by_importance_range
 warnings.filterwarnings('ignore')
 pd.set_option('display.width', 1000)  
 pd.set_option('display.max_columns', None)
@@ -30,6 +30,9 @@ def process_date(value):
 def the_rest(read_data, Source_data, line, Planned_month, setMonth,Planned_year):
     
     line_name = Source_data.at[line, "变电站/线路"]  
+    line_importance = Source_data.at[line, "线路重要度"]
+    voltage = Source_data.at[line, "电压等级"]
+    planned_start_date = Source_data.at[line, "计划开始日期"]
     tingdian_IF = Source_data.at[line, "是否停电"] 
     sRet = re.sub(r"乙", r".*?乙", line_name)
     sRet = re.sub(r"甲", r"甲.*?", sRet)
@@ -38,21 +41,27 @@ def the_rest(read_data, Source_data, line, Planned_month, setMonth,Planned_year)
     for i in range(len(read_data)):
         place_and_text = read_data.iloc[i]["工作地点"] + read_data.iloc[i]["工作内容"]  
         if re.search(sRet, place_and_text):  
-            
-            read_data_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
-            read_data_Month = read_data_time.month
-            read_data_Year = read_data_time.year
+
+            actual_start_time = pd.to_datetime(read_data.iloc[i]["实际开始时间"])
+            actual_end_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
             tingdian = read_data.iloc[i]["工作方式"]
-            if (read_data_Month <= Planned_month) and (read_data_Year == Planned_year): 
+
+            if should_complete_by_importance_range(
+                line_importance=line_importance,
+                voltage=voltage,
+                planned_start_date=planned_start_date,
+                actual_start_time=actual_start_time,
+                actual_end_time=actual_end_time,
+            ):
                 if tingdian == '停电' and tingdian_IF == '是':
-                    ID = read_data.iloc[i]["计划编号"]  
-                    start_time = read_data.iloc[i]["实际开始时间"]
-                    end_time = read_data_time
+                    ID = read_data.iloc[i]["计划编号"]
+                    start_time = actual_start_time
+                    end_time = actual_end_time
                     Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth,Source_data)
                 if tingdian == '不停电' and tingdian_IF == '否':
-                    ID = read_data.iloc[i]["计划编号"]  
-                    start_time = read_data.iloc[i]["实际开始时间"]
-                    end_time = read_data_time
+                    ID = read_data.iloc[i]["计划编号"]
+                    start_time = actual_start_time
+                    end_time = actual_end_time
                     Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth,Source_data)
     return "已回填(4、终端场避雷器试验)"
 

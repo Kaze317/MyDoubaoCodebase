@@ -24,6 +24,59 @@ def process_date(value):
         return pd.NaT  
 
 
+def get_range_start_end_months(line_importance, voltage, planned_start_month):
+    """
+    由“线路重要度 + 电压等级 + 计划开始日期(月份)”推导允许完成的时间范围(按月)。
+    规则：
+    - 关键/重要：2月1次 => (1-2, 3-4, 5-6, ...)
+    - 一般/关注/其余时段：110kV上/下半年；220kV每季度
+    """
+    line_importance = str(line_importance)
+    voltage = str(voltage)
+    planned_start_month = int(planned_start_month)
+
+    # 关键/重要：两个月一窗
+    if re.search(r"关键|重要", line_importance):
+        start_month = ((planned_start_month - 1) // 2) * 2 + 1
+        end_month = min(start_month + 1, 12)
+        return start_month, end_month
+
+    # 一般/关注/其余：按电压等级
+    if "220" in voltage:
+        q_start = ((planned_start_month - 1) // 3) * 3 + 1
+        q_end = min(q_start + 2, 12)
+        return q_start, q_end
+
+    # 默认110kV：上半年/下半年
+    if planned_start_month <= 6:
+        return 1, 6
+    return 7, 12
+
+
+def should_complete_by_importance_range(line_importance, voltage, planned_start_date, actual_start_time, actual_end_time):
+    """
+    规则执行顺序：
+    1) 先看实际开始日期落在哪个范围内
+    2) 再看实际结束日期的月份是否不超过范围结束月份
+    """
+    if pd.isna(planned_start_date) or pd.isna(actual_start_time) or pd.isna(actual_end_time):
+        return False
+
+    planned_year = planned_start_date.year
+    if actual_start_time.year != planned_year or actual_end_time.year != planned_year:
+        return False
+
+    start_m, end_m = get_range_start_end_months(
+        line_importance=line_importance,
+        voltage=voltage,
+        planned_start_month=planned_start_date.month
+    )
+    actual_start_m = actual_start_time.month
+    actual_end_m = actual_end_time.month
+
+    return (start_m <= actual_start_m <= end_m) and (actual_end_m <= end_m)
+
+
 
 def the_rest(read_data, Source_data, line, Planned_month, setMonth):
     
@@ -119,11 +172,26 @@ def Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, set
 def remind(Source_data,line,setMonth,Planned_month,year_name): 
     performance = Source_data.at[line,"完成情况"]
     
-    Planned_year = Source_data.at[line,year_name]
-    Planned_year = process_date(Planned_year)
-    Planned_year = Planned_year.year
-    
-    if performance != "已完成" and setMonth == Planned_month and Planned_year == 2025:
+    if performance == "已完成":
+        return
+
+    planned_start_date = process_date(Source_data.at[line, "计划开始日期"])
+    if pd.isna(planned_start_date):
+        return
+
+    # 仍沿用你原来项目对年份的口径（默认只提醒2025年）
+    if planned_start_date.year != 2025:
+        return
+
+    line_importance = Source_data.at[line, "线路重要度"]
+    voltage = Source_data.at[line, "电压等级"] if "电压等级" in Source_data.columns else ""
+    _, due_end_month = get_range_start_end_months(
+        line_importance=line_importance,
+        voltage=voltage,
+        planned_start_month=planned_start_date.month
+    )
+
+    if setMonth == due_end_month:
         Source_data.iloc[line, Source_data.columns.get_loc("计划临期提醒")] = f"{setMonth}月需要提醒"
 
 
@@ -171,8 +239,8 @@ def main_1(setMonth):
         
         
         Planned_month = Planned_end_time.month
-        Planned_year = Planned_end_time.year
-        Planned_start_month = Planned_start_time.month
+        voltage = Source_data.at[line, "电压等级"]
+        # Planned_year/Planned_start_month在旧逻辑里使用；新逻辑由 should_complete_by_importance_range 统一判断
         line_name = Source_data.at[line, "线路名称"]  
         sRet = re.sub(r"乙", r".*?乙", line_name)
         sRet = re.sub(r"甲", r"甲.*?", sRet)
@@ -182,13 +250,18 @@ def main_1(setMonth):
             place_and_text = read_data.iloc[i]["工作地点"] + read_data.iloc[i]["工作内容"]  
             if re.search(sRet, place_and_text):
                 
-                read_data_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
-                read_data_Month = read_data_time.month
-                read_data_Year = read_data_time.year
-                if (Planned_start_month <= read_data_Month <= Planned_month) and (read_data_Year == Planned_year):
+                actual_start_time = pd.to_datetime(read_data.iloc[i]["实际开始时间"])
+                actual_end_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
+                if should_complete_by_importance_range(
+                    line_importance=line_importance,
+                    voltage=voltage,
+                    planned_start_date=Planned_start_time,
+                    actual_start_time=actual_start_time,
+                    actual_end_time=actual_end_time
+                ):
                     ID = read_data.iloc[i]["计划编号"]  
                     start_time = read_data.iloc[i]["实际开始时间"]
-                    end_time = read_data_time
+                    end_time = actual_end_time
                     Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth,Source_data)
         remind(Source_data, line, setMonth, Planned_month,year_name='计划结束日期')  
     

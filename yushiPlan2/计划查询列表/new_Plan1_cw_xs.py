@@ -3,7 +3,7 @@ import re
 import warnings
 from datetime import datetime
 import pandas as pd
-from Plan1 import remind
+from Plan1 import remind, should_complete_by_importance_range
 warnings.filterwarnings('ignore')
 pd.set_option('display.width', 1000)  
 pd.set_option('display.max_columns', None)
@@ -153,6 +153,7 @@ def new_main_CW_XS(setMonth):
         line_importance = Source_data.at[line, "线路重要度"]  
         Planned_end_time = Source_data.at[line, '计划结束日期']
         Planned_start_time = Source_data.at[line, '计划开始日期']
+        voltage = Source_data.at[line, "电压等级"]
         
         
         
@@ -168,13 +169,18 @@ def new_main_CW_XS(setMonth):
             place_and_text = read_data.iloc[i]["工作地点"] + read_data.iloc[i]["工作内容"]  
             if re.search(sRet, place_and_text):
                 
-                read_data_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
-                read_data_Month = read_data_time.month
-                read_data_Year = read_data_time.year
-                if (Planned_start_month <= read_data_Month <= Planned_month) and (read_data_Year == Planned_year):
+                actual_start_time = pd.to_datetime(read_data.iloc[i]["实际开始时间"])
+                actual_end_time = pd.to_datetime(read_data.iloc[i]["实际结束时间"])
+                if should_complete_by_importance_range(
+                    line_importance=line_importance,
+                    voltage=voltage,
+                    planned_start_date=Planned_start_time,
+                    actual_start_time=actual_start_time,
+                    actual_end_time=actual_end_time,
+                ):
                     ID = read_data.iloc[i]["计划编号"]  
-                    start_time = read_data.iloc[i]["实际开始时间"]
-                    end_time = read_data_time
+                    start_time = actual_start_time
+                    end_time = actual_end_time
                     Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, setMonth,Source_data)
         remind(Source_data, line, setMonth, Planned_month,year_name='计划结束日期')  
     
