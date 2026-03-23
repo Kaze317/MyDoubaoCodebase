@@ -237,7 +237,7 @@ def new_main_CW_XS(setMonth):
     
     Source_data = load_source_with_auto_header(
         Source_path,
-        "1、架空线路红外检测（重要交跨管控要求）"
+        "1、架空线路红外检测"
     )
 
     planned_start_col = pick_plan_date_column(Source_data, kind="start")
