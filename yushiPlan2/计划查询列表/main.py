@@ -123,6 +123,17 @@ def print_backfill_summary(name, data, month):
     print(f'[回填统计] {name}: 已完成={completed_count}, {month}月完成={month_completed_count}, 已回填起止日期={date_backfill_count}')
 
 
+def resource_path(relative_path):
+    """获取打包后资源的绝对路径"""
+    if getattr(sys, 'frozen', False):
+        # 运行在打包后的 exe 中
+        base_path = sys._MEIPASS
+    else:
+        # 运行在开发环境中
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
 if __name__ == '__main__':
     print(f"运行目录已锁定为: {BASE_DIR}")
 
@@ -144,7 +155,7 @@ if __name__ == '__main__':
     data_main8 = main_8(now_month)
 
     print_backfill_summary('1、架空线路红外检测', data_main1, now_month)
-    print_backfill_summary('1、架空线路红外检测（重要交跨管控要求）', data_main1_CW, now_month)
+    print_backfill_summary('1、架空线路红外检测', data_main1_CW, now_month) # 重要交跨管控要求
     print_backfill_summary('2、架空线路接地电阻测试', data_main2, now_month)
     print_backfill_summary('3、电缆线路交叉互联预试', data_main3, now_month)
     print_backfill_summary('4、终端场避雷器试验', data_main4, now_month)
@@ -206,7 +217,7 @@ if __name__ == '__main__':
 
     
     content_1 = content_data(data=data_1, text='1.架空线路红外检测')
-    content_1_CW = content_data(data=data_1_CW, text='2.架空线路红外检测（重要交跨管控要求）')
+    content_1_CW = content_data(data=data_1_CW, text='2.架空线路红外检测') # 重要交跨管控要求
     content_2 = content_data(data=data_2, text='3.架空线路接地电阻测试')
     content_3 = content_data(data=data_3, text='4.电缆线路交叉互联预试')
     content_4 = content_data(data=data_4, text='5.终端场避雷器试验')
@@ -256,7 +267,7 @@ if __name__ == '__main__':
     print('正在写入数据到核查问题记录表')
     with pd.ExcelWriter(f'《输电二所{current_year}年{now_month}月预试计划核查问题记录表》.xlsx') as writer:
         data_1.to_excel(writer, sheet_name='架空线路红外检测', index=False)
-        data_1_CW.to_excel(writer, sheet_name='架空线路红外检测（重要交跨管控要求）', index=False)
+        data_1_CW.to_excel(writer, sheet_name='架空线路红外检测', index=False) # 重要交跨管控要求
         
         data_2.to_excel(writer, sheet_name='架空线路接地电阻测试', index=False)
         data_3.to_excel(writer, sheet_name='电缆线路交叉互联预试', index=False)

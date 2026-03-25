@@ -201,6 +201,8 @@ def Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, set
     if work_content_col is None or plan_id_col is None:
         print("[warn] new_Plan1_cw_xs Data_Backfill 缺少工作地点和内容/计划编号列。")
 
+    # 对Excel中开始时间列进行数值转换
+
     Source_data.iloc[line, Source_data.columns.get_loc(start_col)] = start_time
     Source_data.iloc[line, Source_data.columns.get_loc(end_col)] = end_time
 
@@ -216,7 +218,7 @@ def Data_Backfill(line, line_name, place_and_text, ID, start_time, end_time, set
 
 
 def new_main_CW_XS(setMonth):
-    setYear = "2025"
+    setYear = "2026"
     
     
     
@@ -237,7 +239,7 @@ def new_main_CW_XS(setMonth):
     
     Source_data = load_source_with_auto_header(
         Source_path,
-        "1、架空线路红外检测"
+        "1、架空线路红外检测" # 重要管跨要求
     )
 
     planned_start_col = pick_plan_date_column(Source_data, kind="start")
@@ -304,8 +306,8 @@ def new_main_CW_XS(setMonth):
     Source_data[planned_end_col] = pd.to_datetime(Source_data[planned_end_col]).dt.strftime('%Y-%m-%d')
     
     with pd.ExcelWriter(Source_path, engine='openpyxl', mode='a', if_sheet_exists='overlay') as writer:
-        Source_data.to_excel(writer, sheet_name="1、架空线路红外检测（重要交跨管控要求）", startrow=1, startcol=0, index=False)
-    
+        Source_data.to_excel(writer, sheet_name="1、架空线路红外检测", startrow=1, startcol=0, index=False)
+    # 重要管跨要求
     return Source_data
 
 if __name__ == '__main__':

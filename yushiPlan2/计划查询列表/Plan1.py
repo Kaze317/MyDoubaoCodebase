@@ -1,4 +1,6 @@
 import glob
+import os
+import sys
 import re
 import warnings
 from datetime import datetime
@@ -244,8 +246,8 @@ def remind(Source_data,line,setMonth,Planned_month,year_name):
     if pd.isna(planned_start_date):
         return
 
-    # 仍沿用你原来项目对年份的口径（默认只提醒2025年）
-    if planned_start_date.year != 2025:
+    # 仍沿用你原来项目对年份的口径（默认只提醒2026年）
+    if planned_start_date.year != 2026:
         return
 
     line_importance_col = find_column(Source_data, "线路重要度")
@@ -268,25 +270,45 @@ def remind(Source_data,line,setMonth,Planned_month,year_name):
 
 
 def main_1(setMonth):
-    setYear = "2025"
-    
-    
-    
-    
-    
-    path = {
-        'one_path': './*计划查询列表*.xlsx',
-        'two_path': './*预试检测计划*.xlsx',
-    }
-    paths = {}
-    for key, pattern in path.items():
-        matched_files = glob.glob(pattern)
-        paths[key] = matched_files[0] if matched_files else None
-    
-    read_path = paths['one_path']
-    Source_path = paths['two_path']
-    
-    
+    setYear = "2026"
+
+    # 优先在 exe 所在目录查找；其次当前工作目录；最后脚本目录
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+    else:
+        exe_dir = os.path.dirname(os.path.abspath(__file__))
+
+    search_dirs = [
+        exe_dir,
+        os.getcwd(),
+        os.path.dirname(os.path.abspath(__file__)),
+    ]
+    # 去重并保序
+    search_dirs = list(dict.fromkeys(search_dirs))
+
+    def _pick_first_file(name_keyword):
+        for d in search_dirs:
+            pattern = os.path.join(d, f"*{name_keyword}*.xlsx")
+            matched_files = glob.glob(pattern)
+            if matched_files:
+                return matched_files[0]
+        return None
+
+    read_path = _pick_first_file("计划查询列表")
+    Source_path = _pick_first_file("预试检测计划")
+
+    if read_path is None:
+        raise FileNotFoundError(
+            "未找到‘计划查询列表’Excel文件。请将文件放到 exe 同目录，文件名包含‘计划查询列表’。"
+        )
+    if Source_path is None:
+        raise FileNotFoundError(
+            "未找到‘预试检测计划’Excel文件。请将文件放到 exe 同目录，文件名包含‘预试检测计划’。"
+        )
+
+    print(f"[路径] 计划查询列表文件: {read_path}")
+    print(f"[路径] 预试检测计划文件: {Source_path}")
+
     Source_data = pd.read_excel(Source_path, sheet_name="1、架空线路红外检测", skiprows=[0,1])
     normalize_columns(Source_data)
     Source_data['计划开始日期'] = Source_data['计划开始日期'].apply(process_date)
